@@ -1,0 +1,45 @@
+/*
+:root {
+  --main-color: #3498db;
+  --secondary-color: rgba(255, 255, 255, 0.8);
+}
+header {
+  background-color: var(--main-color);
+  color: white !important; 
+}
+*/
+
+nav ul li a, h2 {
+  color: hsl(200, 50%, 50%); /* <=== Este formato de color no se considera */
+  text-decoration: none;
+}
+
+@media print {
+  body > div.aside > spam[textbf="false"] {
+    color: black ! important; /* Color 1 */
+  }
+}
+
+@media (orientation: landscape) {
+  .sidebar {
+    width: 200px !
+                 important;  /* Medida 1 */
+    background: url('/images/sidebar-bg.jpg');
+  }
+}
+
+.footer { /* Esta regla tiene dos colores */
+  background-color: #333; /* Color 2 */
+  color: #fff; /* Color 3 */
+  font-size: 12px; /* Medida 2 */
+  background: url('/images/colors/light/orange.jpg')  ;
+  margin: 3mm /* Medida 3 */;
+  margin-top: 4mm /* Medida 4 */;
+  margin-bottom: 4mm /* Medida 5 */;
+  margin-left: 1cm /* Medida 6 */;
+}
+
+#test[att1="!important"] > child[att2="@\'@"]
+                         > grandchild[att='txt\"txt'] {
+    color: blue; /* Color 4 */
+}

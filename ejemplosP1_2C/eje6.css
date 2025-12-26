@@ -1,0 +1,23 @@
+/* SELECTORES CON ATRIBUTOS COMPLEJOS Y PSEUDO-CLASES */
+input[type="text"]:focus,
+input[type="email"]:focus,
+textarea:focus {
+    border-color: rgb(100, 150, 200); /* Color 1 */
+    font-family: "Apple Color Emoji", Arial, sans-serif, ;
+    color: rgba(50, 100, 150, 0.85); /* Color 2 */
+    margin: 10px 20px 30px 40px;
+    margin-left: 5mm;
+    background-image: url("./assets/images/pattern.png");
+    }
+
+/* SELECTOR CON TODOS LOS TIPOS DE COMBINADORES */
+h1, h2,
+h3, div.parent > ul + ol:nth-of-type(2) ~ section[data-type]
+div article:first-child p::first-line {
+    text-transform: uppercase;
+}
+
+/* VARIOS TIPOS DE SELECTORES DE ATRIBUTO */
+div[data-pattern^='Dad\'s\\car'] > div[attr*="!important"] > img[src$=".png"] {
+    border: 1px solid red; /* Color 3 */
+}

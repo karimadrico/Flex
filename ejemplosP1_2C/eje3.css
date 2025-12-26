@@ -1,0 +1,37 @@
+/* Comentario inicial ignorado */
+
+/*
+:root {
+  --main-color: #3498db;
+  --secondary-color: rgba(255, 255, 255, 0.8);
+}
+*/
+header { background-color: #3498db; color: white; }
+
+    nav ul li a, h2[str^='ab\'c\\d'] {
+  color:
+        hsla(200, 50%, 50%, 0.67); /* Este color no se cuenta */
+  text-decoration: none;
+}
+
+/*
+@media print {
+  body {
+    color: black;
+  }
+}
+
+@media (orientation: landscape) {
+  .sidebar {
+    width: 200px;
+    background: url('/images/sidebar-bg.jpg');
+  }
+}
+*/
+
+.footer[str$="ab{c"], .header {
+  background-color: #333;
+  color: #fff;
+  font-size: 12px;
+  background: url('/images/orange.jpg');
+}
