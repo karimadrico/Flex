@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     /* Mostrar resultados */
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
-    printf("3. Número de propiedades !important: %d\n", importantCount);
+    printf("4. Número de propiedades !important: %d\n", importantCount);
     
     if (argc > 1) fclose(yyin);
     return 0;
