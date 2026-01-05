@@ -7,7 +7,9 @@
 #include <string.h>
 
 /* CONTADORES GLOBALES */
+static int mediaBlocks = 0;         // Bloques @media
 static int totalProperties = 0;     // Total de propiedades
+static int importantCount = 0;      // Propiedades !important
 
 %}
 
@@ -16,6 +18,8 @@ static int totalProperties = 0;     // Total de propiedades
 
 /* ESTADOS */
 %x COMMENT
+%x BLOCK
+%x VALUE
 
 /* PATRONES */
 WS              [ \t\r\n]+
@@ -27,14 +31,47 @@ WS              [ \t\r\n]+
 <COMMENT>"*/"           { BEGIN(INITIAL); }
 <COMMENT>.|\n           { }
 
+    /* Detectar bloques @media (estadística 1) */
+<INITIAL>"@media"       { mediaBlocks++; }
+
     /* Ignorar espacios */
 {WS}                    { }
 
-    /* Detectar propiedades simples: palabra seguida de : */
-[a-zA-Z-]+{WS}*":"      { totalProperties++; }
+    /* Detectar inicio de bloque */
+<INITIAL>"{"            { BEGIN(BLOCK); }
 
-    /* Ignorar todo lo demás */
-.                       { }
+    /* Ignorar otros caracteres en INITIAL */
+<INITIAL>.              { }
+
+    /* Dentro de bloque: detectar propiedades */
+<BLOCK>{WS}             { }
+
+<BLOCK>"}"              { BEGIN(INITIAL); }
+
+<BLOCK>"/*"             { BEGIN(COMMENT); }
+
+    /* Detectar propiedad: palabra seguida de : */
+<BLOCK>[a-zA-Z-]+{WS}*":"  { 
+    totalProperties++;
+    BEGIN(VALUE);       // Pasar a analizar el valor
+}
+
+<BLOCK>.                { }
+
+    /* Analizar valores de propiedades */
+<VALUE>{WS}             { }
+
+    /* Detectar !important (estadística 4) */
+<VALUE>"!"{WS}*"important"  { importantCount++; }
+
+    /* Fin de valor con punto y coma */
+<VALUE>";"              { BEGIN(BLOCK); }
+
+    /* Comentarios dentro de valores */
+<VALUE>"/*"             { BEGIN(COMMENT); }
+
+    /* Ignorar otros caracteres en valores */
+<VALUE>.                { }
 
 %%
 
@@ -50,7 +87,10 @@ int main(int argc, char **argv) {
     
     yylex();
     
-    printf("Total propiedades: %d\n", totalProperties);
+    /* Mostrar resultados */
+    printf("1. Número de bloques @media: %d\n", mediaBlocks);
+    printf("2. Número total de propiedades: %d\n", totalProperties);
+    printf("3. Número de propiedades !important: %d\n", importantCount);
     
     if (argc > 1) fclose(yyin);
     return 0;
