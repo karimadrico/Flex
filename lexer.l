@@ -1,58 +1,44 @@
 %{
 /*
  * PRÁCTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
-  */
+ */
 
 #include <stdio.h>
 #include <string.h>
 
-/*------------------------------------------------------------------------------
- * CONTADORES GLOBALES
- *----------------------------------------------------------------------------*/
+/* CONTADORES GLOBALES */
 static int totalProperties = 0;     // Total de propiedades
 
 %}
 
-/*------------------------------------------------------------------------------
- * OPCIONES
- *------------------------------------------------------------------------------*/
+/* OPCIONES */
 %option noyywrap
 
-/*------------------------------------------------------------------------------
- * ESTADOS
- *------------------------------------------------------------------------------*/
+/* ESTADOS */
 %x COMMENT
 
-/*------------------------------------------------------------------------------
- * PATRONES
- *------------------------------------------------------------------------------*/
+/* PATRONES */
 WS              [ \t\r\n]+
 
 %%
 
-/*------------------------------------------------------------------------------
- * REGLAS
- *------------------------------------------------------------------------------*/
-
-/* Comentarios CSS */
+    /* Comentarios CSS */
 "/*"                    { BEGIN(COMMENT); }
 <COMMENT>"*/"           { BEGIN(INITIAL); }
 <COMMENT>.|\n           { }
 
-/* Ignorar espacios */
+    /* Ignorar espacios */
 {WS}                    { }
 
-/* Detectar propiedades simples: palabra seguida de : */
+    /* Detectar propiedades simples: palabra seguida de : */
 [a-zA-Z-]+{WS}*":"      { totalProperties++; }
 
-/* Ignorar todo lo demás */
+    /* Ignorar todo lo demás */
 .                       { }
 
 %%
 
-/*------------------------------------------------------------------------------
- * MAIN
- *------------------------------------------------------------------------------*/
+/* MAIN */
 int main(int argc, char **argv) {
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
