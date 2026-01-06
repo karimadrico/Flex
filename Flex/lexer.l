@@ -10,6 +10,7 @@
 static int mediaBlocks = 0;         // Bloques @media
 static int totalProperties = 0;     // Total de propiedades
 static int importantCount = 0;      // Propiedades !important
+static int measureCount = 0;        // Valores con unidades de medida
 
 %}
 
@@ -23,6 +24,7 @@ static int importantCount = 0;      // Propiedades !important
 
 /* PATRONES */
 WS              [ \t\r\n]+
+UNIT            (pt|mm|cm|pc|in|px|em|ex)
 
 %%
 
@@ -64,6 +66,9 @@ WS              [ \t\r\n]+
     /* Detectar !important (estadística 4) */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
+    /* Detectar unidades de medida (estadística 5) */
+<VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
+
     /* Fin de valor con punto y coma */
 <VALUE>";"              { BEGIN(BLOCK); }
 
@@ -91,6 +96,7 @@ int main(int argc, char **argv) {
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
     printf("4. Número de propiedades !important: %d\n", importantCount);
+    printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     
     if (argc > 1) fclose(yyin);
     return 0;
