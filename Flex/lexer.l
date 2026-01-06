@@ -85,53 +85,14 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
     BEGIN(VALUE);
 }
 
-    /* Ignorar otros caracteres no reconocidos */
-<BLOCK>.|\n             { }
-
-    /* Analizar valores de propiedades */
-<VALUE>{WS}             { }
-
-    /* Cadenas entre comillas dobles */
-<VALUE>"\""             { BEGIN(DQSTR); }
-<DQSTR>"\\\\"           { }
-<DQSTR>"\\\""           { }
-<DQSTR>"\""             { BEGIN(VALUE); }
-<DQSTR>.|\n             { }
-
-    /* Cadenas entre comillas simples */
-<VALUE>"\'"             { BEGIN(SQSTR); }
-<SQSTR>"\\\\"           { }
-<SQSTR>"\\\'"           { }
-<SQSTR>"\'"             { BEGIN(VALUE); }
-<SQSTR>.|\n             { }
-
-    /* Declaración !important */
-<VALUE>"!"{WS}*"important"  { importantCount++; }
-
-    /* Unidades de medida */
-<VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
-
-    /* Colores hexadecimales */
-<VALUE>{HEX8}           { colorCount++; }
-<VALUE>{HEX6}           { colorCount++; }
-<VALUE>{HEX3}           { colorCount++; }
-
-    /* Funciones RGB y RGBA */
-<VALUE>rgba?\([^)]*\)   { colorCount++; }
-
-    /* Nombres de color con lookhead anti-falsos-positivos */
-<VALUE>{COLORNAME}({NONWORD}|$) {
-    if (yyleng > 0) {
-        unsigned char c = (unsigned char)yytext[yyleng-1];
-        if (isalnum(c) || c == '_' || c == '-') {
-            yyless(yyleng - 1);
-        }
-    }
-    colorCount++;
-}
+    /* Ignorar SOLO caracteres individuales */
+<BLOCK>.                { }
 
     /* Fin de valor de propiedad */
-<VALUE>";"              { BEGIN(BLOCK); }
+<VALUE>";"              { 
+    fprintf(stderr, ";\n");
+    BEGIN(BLOCK); 
+}
 
     /* Comentarios dentro de valores */
 <VALUE>"/*"             { BEGIN(COMMENT); }
