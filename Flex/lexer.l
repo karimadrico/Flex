@@ -70,13 +70,27 @@ HEX8            #[0-9A-Fa-f]{8}
     /* Analizar valores */
 <VALUE>{WS}             { }
 
+    /* Cadenas entre comillas dobles */
+<VALUE>"\""             { BEGIN(DQSTR); }
+<DQSTR>"\\\\"           { }
+<DQSTR>"\\\""           { }
+<DQSTR>"\""             { BEGIN(VALUE); }
+<DQSTR>.|\n             { }
+
+    /* Cadenas entre comillas simples */
+<VALUE>"\'"             { BEGIN(SQSTR); }
+<SQSTR>"\\\\"           { }
+<SQSTR>"\\\'"           { }
+<SQSTR>"\'"             { BEGIN(VALUE); }
+<SQSTR>.|\n             { }
+
     /* !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
     /* Unidades de medida */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-    /* Colores HEX (orden importante: más largo primero) */
+    /* Colores HEX */
 <VALUE>{HEX8}           { colorCount++; }
 <VALUE>{HEX6}           { colorCount++; }
 <VALUE>{HEX3}           { colorCount++; }
@@ -95,20 +109,6 @@ HEX8            #[0-9A-Fa-f]{8}
 
     /* Ignorar otros */
 <VALUE>.                { }
-
-    /* Cadenas entre comillas dobles */
-<VALUE>"\""             { BEGIN(DQSTR); }
-<DQSTR>"\\\\"           { }
-<DQSTR>"\\\""           { }
-<DQSTR>"\""             { BEGIN(VALUE); }
-<DQSTR>.|\n             { }
-
-    /* Cadenas entre comillas simples */
-<VALUE>"\'"             { BEGIN(SQSTR); }
-<SQSTR>"\\\\"           { }
-<SQSTR>"\\\'"           { }
-<SQSTR>"\'"             { BEGIN(VALUE); }
-<SQSTR>.|\n             { }
 
 %%
 
