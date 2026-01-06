@@ -12,7 +12,23 @@ static int mediaBlocks = 0;
 static int totalProperties = 0;     
 static int importantCount = 0;      
 static int measureCount = 0;        
-static int colorCount = 0;          
+static int colorCount = 0;
+
+/* Para acumular selector (preparación para estadística #3) */
+#define MAX_SELECTOR 256
+static char currentSelector[MAX_SELECTOR] = {0};
+static size_t selectorLength = 0;
+
+/* Función para limpiar espacios de inicio y fin */
+static void trimSpaces(char *s) {
+    size_t n = strlen(s), i = 0, j = n;
+    while(i < n && isspace((unsigned char)s[i])) i++;
+    while(j > i && isspace((unsigned char)s[j-1])) j--;
+    if(i > 0 || j < n) { 
+        memmove(s, s+i, j-i); 
+        s[j-i] = '\0'; 
+    }
+}
 
 %}
 
@@ -29,10 +45,13 @@ static int colorCount = 0;
 /* PATRONES */
 WS              [ \t\r\n]+
 UNIT            (pt|mm|cm|pc|in|px|em|ex)
+NONWORD         [^A-Za-z0-9_-]
 
 HEX3            #[0-9A-Fa-f]{3}
 HEX6            #[0-9A-Fa-f]{6}
 HEX8            #[0-9A-Fa-f]{8}
+
+COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
 
 %%
 
@@ -44,31 +63,32 @@ HEX8            #[0-9A-Fa-f]{8}
     /* Detectar bloques @media */
 <INITIAL>"@media"       { mediaBlocks++; }
 
-    /* Ignorar espacios */
-{WS}                    { }
+    /* Ignorar espacios en estado inicial */
+<INITIAL>{WS}           { }
 
     /* Detectar inicio de bloque */
 <INITIAL>"{"            { BEGIN(BLOCK); }
 
-    /* Ignorar otros caracteres en INITIAL */
+    /* Ignorar otros caracteres */
 <INITIAL>.              { }
 
-    /* Dentro de bloque */
+    /* Dentro de bloque: orden de reglas específico a genérico */
 <BLOCK>{WS}             { }
 
 <BLOCK>"}"              { BEGIN(INITIAL); }
 
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
-    /* Detectar propiedad */
+    /* Detectar propiedad antes del catch-all */
 <BLOCK>[a-zA-Z-]+{WS}*":"  { 
     totalProperties++;
     BEGIN(VALUE);
 }
 
-<BLOCK>.                { }
+    /* Ignorar otros caracteres no reconocidos */
+<BLOCK>.|\n             { }
 
-    /* Analizar valores */
+    /* Analizar valores de propiedades */
 <VALUE>{WS}             { }
 
     /* Cadenas entre comillas dobles */
@@ -85,38 +105,38 @@ HEX8            #[0-9A-Fa-f]{8}
 <SQSTR>"\'"             { BEGIN(VALUE); }
 <SQSTR>.|\n             { }
 
-    /* !important */
+    /* Declaración !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
     /* Unidades de medida */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-    /* Colores HEX */
+    /* Colores hexadecimales */
 <VALUE>{HEX8}           { colorCount++; }
 <VALUE>{HEX6}           { colorCount++; }
 <VALUE>{HEX3}           { colorCount++; }
 
-    /* RGB y RGBA */
+    /* Funciones RGB y RGBA */
 <VALUE>rgba?\([^)]*\)   { colorCount++; }
 
-    /* Nombres de color */
-<VALUE>black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange  { 
+    /* Nombres de color con lookhead anti-falsos-positivos */
+<VALUE>{COLORNAME}({NONWORD}|$) {
     if (yyleng > 0) {
         unsigned char c = (unsigned char)yytext[yyleng-1];
-        if (isalnum(c) || c == '_' || c == '-') {  
+        if (isalnum(c) || c == '_' || c == '-') {
             yyless(yyleng - 1);
         }
     }
     colorCount++;
 }
 
-    /* Fin de valor */
+    /* Fin de valor de propiedad */
 <VALUE>";"              { BEGIN(BLOCK); }
 
-    /* Comentarios en valores */
+    /* Comentarios dentro de valores */
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-    /* Ignorar otros */
+    /* Ignorar otros caracteres */
 <VALUE>.                { }
 
 %%
