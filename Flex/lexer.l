@@ -22,6 +22,8 @@ static int colorCount = 0;
 %x COMMENT
 %x BLOCK
 %x VALUE
+%x DQSTR
+%x SQSTR
 
 /* PATRONES */
 WS              [ \t\r\n]+
@@ -93,6 +95,20 @@ HEX8            #[0-9A-Fa-f]{8}
 
     /* Ignorar otros */
 <VALUE>.                { }
+
+    /* Cadenas entre comillas dobles */
+<VALUE>"\""             { BEGIN(DQSTR); }
+<DQSTR>"\\\\"           { }
+<DQSTR>"\\\""           { }
+<DQSTR>"\""             { BEGIN(VALUE); }
+<DQSTR>.|\n             { }
+
+    /* Cadenas entre comillas simples */
+<VALUE>"\'"             { BEGIN(SQSTR); }
+<SQSTR>"\\\\"           { }
+<SQSTR>"\\\'"           { }
+<SQSTR>"\'"             { BEGIN(VALUE); }
+<SQSTR>.|\n             { }
 
 %%
 
