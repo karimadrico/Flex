@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 /* CONTADORES GLOBALES */
 static int mediaBlocks = 0;         
@@ -99,7 +100,15 @@ HEX8            #[0-9A-Fa-f]{8}
 <VALUE>rgba?\([^)]*\)   { colorCount++; }
 
     /* Nombres de color */
-<VALUE>black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange  { colorCount++; }
+<VALUE>black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange  { 
+    if (yyleng > 0) {
+        unsigned char c = (unsigned char)yytext[yyleng-1];
+        if (isalnum(c) || c == '_' || c == '-') {  
+            yyless(yyleng - 1);
+        }
+    }
+    colorCount++;
+}
 
     /* Fin de valor */
 <VALUE>";"              { BEGIN(BLOCK); }
