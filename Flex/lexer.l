@@ -7,10 +7,11 @@
 #include <string.h>
 
 /* CONTADORES GLOBALES */
-static int mediaBlocks = 0;         // Bloques @media
-static int totalProperties = 0;     // Total de propiedades
-static int importantCount = 0;      // Propiedades !important
-static int measureCount = 0;        // Valores con unidades de medida
+static int mediaBlocks = 0;         
+static int totalProperties = 0;     
+static int importantCount = 0;      
+static int measureCount = 0;        
+static int colorCount = 0;          
 
 %}
 
@@ -26,6 +27,10 @@ static int measureCount = 0;        // Valores con unidades de medida
 WS              [ \t\r\n]+
 UNIT            (pt|mm|cm|pc|in|px|em|ex)
 
+HEX3            #[0-9A-Fa-f]{3}
+HEX6            #[0-9A-Fa-f]{6}
+HEX8            #[0-9A-Fa-f]{8}
+
 %%
 
     /* Comentarios CSS */
@@ -33,7 +38,7 @@ UNIT            (pt|mm|cm|pc|in|px|em|ex)
 <COMMENT>"*/"           { BEGIN(INITIAL); }
 <COMMENT>.|\n           { }
 
-    /* Detectar bloques @media (estadística 1) */
+    /* Detectar bloques @media */
 <INITIAL>"@media"       { mediaBlocks++; }
 
     /* Ignorar espacios */
@@ -45,37 +50,48 @@ UNIT            (pt|mm|cm|pc|in|px|em|ex)
     /* Ignorar otros caracteres en INITIAL */
 <INITIAL>.              { }
 
-    /* Dentro de bloque: detectar propiedades */
+    /* Dentro de bloque */
 <BLOCK>{WS}             { }
 
 <BLOCK>"}"              { BEGIN(INITIAL); }
 
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
-    /* Detectar propiedad: palabra seguida de : */
+    /* Detectar propiedad */
 <BLOCK>[a-zA-Z-]+{WS}*":"  { 
     totalProperties++;
-    BEGIN(VALUE);       // Pasar a analizar el valor
+    BEGIN(VALUE);
 }
 
 <BLOCK>.                { }
 
-    /* Analizar valores de propiedades */
+    /* Analizar valores */
 <VALUE>{WS}             { }
 
-    /* Detectar !important (estadística 4) */
+    /* !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
-    /* Detectar unidades de medida (estadística 5) */
+    /* Unidades de medida */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-    /* Fin de valor con punto y coma */
+    /* Colores HEX (orden importante: más largo primero) */
+<VALUE>{HEX8}           { colorCount++; }
+<VALUE>{HEX6}           { colorCount++; }
+<VALUE>{HEX3}           { colorCount++; }
+
+    /* RGB y RGBA */
+<VALUE>rgba?\([^)]*\)   { colorCount++; }
+
+    /* Nombres de color */
+<VALUE>black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange  { colorCount++; }
+
+    /* Fin de valor */
 <VALUE>";"              { BEGIN(BLOCK); }
 
-    /* Comentarios dentro de valores */
+    /* Comentarios en valores */
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-    /* Ignorar otros caracteres en valores */
+    /* Ignorar otros */
 <VALUE>.                { }
 
 %%
@@ -92,11 +108,11 @@ int main(int argc, char **argv) {
     
     yylex();
     
-    /* Mostrar resultados */
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
+    printf("6. Número de especificaciones de color: %d\n", colorCount);
     
     if (argc > 1) fclose(yyin);
     return 0;
