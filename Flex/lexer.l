@@ -116,9 +116,10 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 <VALUE>rgba?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>{COLORNAME} { colorCount++; colorsInCurrentRule++; }
+<VALUE>[ \t]*{COLORNAME}[ \t]*[;}]? { colorCount++; colorsInCurrentRule++; }
 
 <VALUE>";"              { BEGIN(BLOCK); }
+
 
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
