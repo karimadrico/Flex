@@ -70,8 +70,15 @@ HEX8    \#[0-9A-Fa-f]{8}
 <MEDIA_HDR>"{"      { insideMedia = 1; mediaDepth = 1; BEGIN(INITIAL); }
 <MEDIA_HDR>.|\n      { }
 
-/* Selector: se reconoce justo antes de '{' (los espacios antes de '{' no se consumen) */
-<INITIAL>{SEL}+({WS}+{SEL}+)*/{WS}*\{ {
+<INITIAL>{SEL}+/{WS}*\{ {
+                    if (currentSelector) { free(currentSelector); currentSelector = NULL; }
+                    currentSelector = strdup(yytext);
+                    colorsInCurrentRule = 0;
+                    propertiesInCurrentRule = 0;
+                    BEGIN(SELECTOR_END);
+                }
+
+<INITIAL>{SEL}+({WS}+{SEL}+)+/{WS}*\{ {
                     if (currentSelector) { free(currentSelector); currentSelector = NULL; }
                     currentSelector = strdup(yytext);
                     colorsInCurrentRule = 0;
@@ -120,6 +127,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
+
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
