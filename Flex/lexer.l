@@ -55,8 +55,8 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 %%
 
-"/*"                { BEGIN(COMMENT); }
-<COMMENT>"*/"       { BEGIN(INITIAL); }
+"/*"                { prevState = YYSTATE; BEGIN(COMMENT); }
+<COMMENT>"*/"       { BEGIN(prevState); }
 <COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
@@ -91,7 +91,7 @@ HEX8    \#[0-9A-Fa-f]{8}
     BEGIN(BLOCK);
 }
 
-<SELECTOR>"/*"      { BEGIN(COMMENT); }
+<SELECTOR>"/*"      { prevState = YYSTATE; BEGIN(COMMENT); }
 
 <INITIAL>"{"       { 
     currentSelector[0] = '\0';
@@ -103,7 +103,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
-<BLOCK>"/*"     { BEGIN(COMMENT); }
+<BLOCK>"/*"     { prevState = YYSTATE; BEGIN(COMMENT); }
 
 <BLOCK>"{"         {
     colorsInCurrentRule=0; 
@@ -122,7 +122,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
-<VALUE>"/*"     { BEGIN(COMMENT); }
+<VALUE>"/*"     { prevState = YYSTATE; BEGIN(COMMENT); }
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
