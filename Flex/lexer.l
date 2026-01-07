@@ -19,7 +19,9 @@ static int colorCount = 0;
 %option noyywrap
 
 /* ESTADOS */
-%x COMMENT
+%x COMMENT_INITIAL
+%x COMMENT_BLOCK
+%x COMMENT_VALUE
 %x BLOCK
 %x VALUE
 %x DQSTR
@@ -40,60 +42,59 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 %%
 
-/*     COMENTARIOS */
-"/*"                    { BEGIN(COMMENT); }
-<COMMENT>"*/"           { BEGIN(INITIAL); }
-<COMMENT>.|\n           { }
+/*     COMENTARIOS - Estados específicos por contexto */
+"/*"                        { BEGIN(COMMENT_INITIAL); }
+<COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
+<COMMENT_INITIAL>.|\n       { }
+
+<BLOCK>"/*"                 { BEGIN(COMMENT_BLOCK); }
+<COMMENT_BLOCK>"*/"         { BEGIN(BLOCK); }
+<COMMENT_BLOCK>.|\n         { }
+
+<VALUE>"/*"                 { BEGIN(COMMENT_VALUE); }
+<COMMENT_VALUE>"*/"         { BEGIN(VALUE); }
+<COMMENT_VALUE>.|\n         { }
 
 /*      @media BLOQUES */
-<INITIAL>"@media"       { mediaBlocks++; }
+<INITIAL>"@media"           { mediaBlocks++; }
 
 /*         INICIAL */
-<INITIAL>{WS}           { }
+<INITIAL>{WS}               { }
 
-<INITIAL>"{"            { 
-    BEGIN(BLOCK); 
-}
+<INITIAL>"{"                { BEGIN(BLOCK); }
 
-<INITIAL>.              { }
+<INITIAL>.                  { }
 
 /*       BLOQUE CSS */
-<BLOCK>{WS}             { }
+<BLOCK>{WS}                 { }
 
-/* cierre de bloque */
-<BLOCK>"}"              { 
-    BEGIN(INITIAL); 
-}
+<BLOCK>"}"                  { BEGIN(INITIAL); }
 
-/* comentario dentro de bloque */
-<BLOCK>"/*"             { BEGIN(COMMENT); }
-
-/* PROPIEDADES 
-   permite espacios al inicio e indentación */
+/* PROPIEDADES - permite espacios al inicio */
 <BLOCK>{WS}*{IDENT}{WS}*":"  { 
     totalProperties++;
     BEGIN(VALUE);
 }
 
-/* catch-all — SIEMPRE EL ÚLTIMO */
-<BLOCK>.                { }
+/* catch-all - SIEMPRE EL ÚLTIMO */
+<BLOCK>.                    { }
 
 /*     VALORES */
-<VALUE>{WS}             { }
+<VALUE>{WS}                 { }
 
 /* cadenas dobles */
-<VALUE>"\""             { BEGIN(DQSTR); }
-<DQSTR>"\\\\"           { }
-<DQSTR>"\\\""           { }
-<DQSTR>"\""             { BEGIN(VALUE); }
-<DQSTR>.|\n             { }
+<VALUE>"\""                 { BEGIN(DQSTR); }
+<DQSTR>"\\\\"               { }
+<DQSTR>"\\\""               { }
+<DQSTR>"\""                 { BEGIN(VALUE); }
+<DQSTR>.|\n                 { }
 
 /* cadenas simples */
-<VALUE>"\'"             { BEGIN(SQSTR); }
-<SQSTR>"\\\\"           { }
-<SQSTR>"\\\'"           { }
-<SQSTR>"\'"             { BEGIN(VALUE); }
-<SQSTR>.|\n             { }
+<VALUE>"\'"                 { BEGIN(SQSTR); }
+<SQSTR>"\\\\"               { }
+<SQSTR>"\\\'"               { }
+<SQSTR>"\'"                 { BEGIN(VALUE); }
+<SQSTR>.|\n                 { }
 
 /* !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
@@ -102,33 +103,33 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
 /* colores HEX */
-<VALUE>{HEX8}           { colorCount++; }
-<VALUE>{HEX6}           { colorCount++; }
-<VALUE>{HEX3}           { colorCount++; }
+<VALUE>{HEX8}               { colorCount++; }
+<VALUE>{HEX6}               { colorCount++; }
+<VALUE>{HEX3}               { colorCount++; }
 
 /* rgb/rgba */
-<VALUE>rgba?\([^)]*\)   { colorCount++; }
+<VALUE>rgba?\([^)]*\)       { colorCount++; }
 
 /* color por nombre */
 <VALUE>{COLORNAME}({NONWORD}|$) {
+    if (yyleng > 0) {
+        unsigned char c = (unsigned char)yytext[yyleng-1];
+        if (isalnum(c) || c == '_' || c == '-') {
+            yyless(yyleng - 1);
+        }
+    }
     colorCount++;
 }
 
 /* fin de valor */
-<VALUE>";"              { 
-    BEGIN(BLOCK); 
-}
-
-/* comentarios dentro de valores */
-<VALUE>"/*"             { BEGIN(COMMENT); }
+<VALUE>";"                  { BEGIN(BLOCK); }
 
 /* resto del valor */
-<VALUE>.                { }
+<VALUE>.                    { }
 
 %%
 
 int main(int argc, char **argv) {
-
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
         if (!yyin) {
