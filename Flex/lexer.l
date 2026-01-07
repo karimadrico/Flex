@@ -50,7 +50,10 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <INITIAL>{WS}           { }
 
     /* Detectar inicio de bloque */
-<INITIAL>"{"            { BEGIN(BLOCK); }
+<INITIAL>"{"            { 
+    fprintf(stderr, "{ ABRE\n");
+    BEGIN(BLOCK); 
+}
 
     /* Ignorar otros caracteres */
 <INITIAL>.              { }
@@ -59,7 +62,7 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <BLOCK>{WS}             { }
 
 <BLOCK>"}"              { 
-    fprintf(stderr, "} cierre bloque\n");
+    fprintf(stderr, "} CIERRE (total=%d)\n", totalProperties);
     BEGIN(INITIAL); 
 }
 
