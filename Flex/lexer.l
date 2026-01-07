@@ -47,15 +47,15 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 %%
 
-/* Comentarios */
+
 "/*"                    { BEGIN(COMMENT); }
 <COMMENT>"*/"           { BEGIN(INITIAL); }
 <COMMENT>.|\n           { }
 
-/* Media queries */
+
 <INITIAL>"@media"       { mediaBlocks++; insideMedia = 1; }
 
-/* Inicial y bloques */
+
 <INITIAL>{WS}+           { }
 <INITIAL>"{"            { colorsInCurrentRule = 0; propertiesInCurrentRule = 0; BEGIN(BLOCK); }
 <INITIAL>.              { }
@@ -63,10 +63,10 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <BLOCK>{WS}+             { }
 <BLOCK>"/*"              { BEGIN(COMMENT); }
 
-/* Propiedad dentro de bloque */
+
 <BLOCK>{IDENT}{WS}*":"   { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
 
-/* Fin de bloque */
+
 <BLOCK>"}"              {
     if (colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
     if (propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
@@ -77,41 +77,41 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 <BLOCK>.                { }
 
-/* VALUE */
+
 <VALUE>{WS}+            { }
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-/* Cadenas dobles */
+
 <VALUE>"\""             { BEGIN(DQSTR); }
 <DQSTR>[^"]+            { }
 <DQSTR>"\""             { BEGIN(VALUE); }
 
-/* Cadenas simples */
+
 <VALUE>"\'"             { BEGIN(SQSTR); }
 <SQSTR>[^']+            { }
 <SQSTR>"\'"             { BEGIN(VALUE); }
 
-/* Propiedades !important */
+
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
-/* Valores con unidades */
+
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-/* Colores HEX */
+
 <VALUE>{HEX8}           { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX6}           { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX3}           { colorCount++; colorsInCurrentRule++; }
 
-/* Colores rgb / rgba */
+
 <VALUE>rgb(a)?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
 
-/* Nombres de color */
+
 <VALUE>{COLORNAME}       { colorCount++; colorsInCurrentRule++; }
 
-/* Fin de propiedad */
+
 <VALUE>";"              { BEGIN(BLOCK); }
 
-/* Regla genérica */
+
 <VALUE>.                 { }
 
 %%
