@@ -55,7 +55,9 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <BLOCK>"}"      {
                     if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
                     if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
-                    if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
+                    if(propertiesInCurrentRule > 0) {
+                        if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
+                    }
                     insideMedia = 0;
                     BEGIN(INITIAL);
                  }
