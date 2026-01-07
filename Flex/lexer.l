@@ -77,18 +77,19 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 <BLOCK>.                { }
 
-/* ---------------------- VALUE ---------------------- */
+/* VALUE */
 <VALUE>{WS}+            { }
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-<VALUE>"\""     { BEGIN(DQSTR); }
-<DQSTR>[^"]+    { }
-<DQSTR>"\""     { BEGIN(VALUE); }
+/* Cadenas dobles */
+<VALUE>"\""             { BEGIN(DQSTR); }
+<DQSTR>[^"]+            { }
+<DQSTR>"\""             { BEGIN(VALUE); }
 
-<VALUE>"\'"     { BEGIN(SQSTR); }
-<SQSTR>[^']+    { }
-<SQSTR>"\'"     { BEGIN(VALUE); }
-
+/* Cadenas simples */
+<VALUE>"\'"             { BEGIN(SQSTR); }
+<SQSTR>[^']+            { }
+<SQSTR>"\'"             { BEGIN(VALUE); }
 
 /* Propiedades !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
@@ -102,7 +103,7 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <VALUE>{HEX3}           { colorCount++; colorsInCurrentRule++; }
 
 /* Colores rgb / rgba */
-<VALUE>rgba?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
+<VALUE>rgb(a)?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
 
 /* Nombres de color */
 <VALUE>{COLORNAME}       { colorCount++; colorsInCurrentRule++; }
@@ -133,3 +134,4 @@ int main(int argc, char **argv) {
     if (argc > 1) fclose(yyin);
     return 0;
 }
+
