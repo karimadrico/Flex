@@ -47,11 +47,19 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 <INITIAL>{WS}+  { }
 <INITIAL>"@media" { mediaBlocks++; insideMedia = 1; }
-<INITIAL>"{"   { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
+<INITIAL>"{"       { 
+    colorsInCurrentRule=0; 
+    propertiesInCurrentRule=0; 
+    BEGIN(BLOCK); 
+}
 <INITIAL>.      { }
 
 <BLOCK>{WS}+    { }
 <BLOCK>"/*"     { BEGIN(COMMENT); }
+<BLOCK>"{"         {
+    colorsInCurrentRule=0; 
+    propertiesInCurrentRule=0;
+}
 <BLOCK>"}"      {
                     if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
                     if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
