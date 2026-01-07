@@ -61,9 +61,9 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 %%
 
-"/*"            { BEGIN(COMMENT); }
-<COMMENT>"*/"   { BEGIN(INITIAL); }
-<COMMENT>.|\n   { }
+"/*"                { BEGIN(COMMENT_INITIAL); }
+<COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
+<COMMENT_INITIAL>.|\n       { }
 
 <INITIAL>{WS}+      { }
 <INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
@@ -81,7 +81,10 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
-<BLOCK>"/*"     { BEGIN(COMMENT); }
+<BLOCK>"/*"     { BEGIN(COMMENT_BLOCK); }
+<COMMENT_BLOCK>"*/"       { BEGIN(BLOCK); }
+<COMMENT_BLOCK>.|\n       { }
+
 <BLOCK>"{"         {
     colorsInCurrentRule=0; 
     propertiesInCurrentRule=0;
@@ -99,7 +102,9 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
-<VALUE>"/*"     { BEGIN(COMMENT); }
+<VALUE>"/*"     { BEGIN(COMMENT_VALUE); }
+<COMMENT_VALUE>"*/"       { BEGIN(VALUE); }
+<COMMENT_VALUE>.|\n       { }
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
@@ -116,7 +121,6 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <VALUE>{HEX6} { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX3} { colorCount++; colorsInCurrentRule++; }
 
-/* Reglas individuales para colores y funciones RGB */
 <VALUE>rgb\([0-9% ,\.]*\) { colorCount++; colorsInCurrentRule++; }
 <VALUE>rgba\([0-9% ,\.]*,[0-9\.]*\) { colorCount++; colorsInCurrentRule++; }
 
