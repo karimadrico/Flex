@@ -58,13 +58,17 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
     /* Dentro de bloque: orden específico a genérico */
 <BLOCK>{WS}             { }
 
-<BLOCK>"}"              { BEGIN(INITIAL); }
+<BLOCK>"}"              { 
+    fprintf(stderr, "} cierre bloque\n");
+    BEGIN(INITIAL); 
+}
 
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
     /* Detectar propiedad */
 <BLOCK>[a-zA-Z-]+{WS}*":"  { 
     totalProperties++;
+    fprintf(stderr, "PROP #%d: %s\n", totalProperties, yytext);
     BEGIN(VALUE);
 }
 
@@ -114,7 +118,10 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 }
 
     /* Fin de valor: ANTES del catch-all */
-<VALUE>";"              { BEGIN(BLOCK); }
+<VALUE>";"              { 
+    fprintf(stderr, ";\n");
+    BEGIN(BLOCK); 
+}
 
     /* Comentarios dentro de valores */
 <VALUE>"/*"             { BEGIN(COMMENT); }
