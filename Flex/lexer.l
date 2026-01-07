@@ -26,9 +26,6 @@ char *currentSelector = NULL;
 /* prevState para comentarios */
 int prevState = 0;
 
-/* Aux para comentarios/valores */
-int seenSemicolon = 0;
-
 /* Reglas dentro/fuera de media */
 int insideMedia = 0;
 int mediaDepth = 0;
@@ -40,9 +37,8 @@ int rulesOutsideMedia = 0;
 
 /* Estados exclusivos */
 %x COMMENT
-%x SELECTOR
-%x SELECTOR_DQ
-%x SELECTOR_SQ
+%x MEDIA_HDR
+%x SELECTOR_END
 %x BLOCK
 %x VALUE
 %x DQSTR
@@ -52,7 +48,7 @@ int rulesOutsideMedia = 0;
 WS      [ \t\r\n]+
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
-SEL     [a-zA-Z0-9_.#:\[\]()="'* >+~-]+
+SEL     [a-zA-Z0-9_.#:\[\]()="'*, >+~-]+
 
 NONWORD [^A-Za-z0-9_-]
 COLORNAME (black|gray|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
@@ -63,47 +59,31 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 %%
 
-"/*"                { prevState = YY_START; BEGIN(COMMENT); }
+<INITIAL,MEDIA_HDR,SELECTOR_END,BLOCK,VALUE>"/*"  { prevState = YY_START; BEGIN(COMMENT); }
 <COMMENT>"*/"       { 
                                                 BEGIN(prevState);
-                                                if (prevState == VALUE && seenSemicolon) {
-                                                        seenSemicolon = 0;
-                                                        BEGIN(BLOCK);
-                                                }
                                             }
 <COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
-<INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
+<INITIAL>"@media"   { mediaBlocks++; BEGIN(MEDIA_HDR); }
+<MEDIA_HDR>"{"      { insideMedia = 1; mediaDepth = 1; BEGIN(INITIAL); }
+<MEDIA_HDR>.|\n      { }
 
-<INITIAL>{SEL}      { yymore(); BEGIN(SELECTOR); }
-
-<SELECTOR>"{"     {
-                    /* quitar '{' del lexema actual */
-                    yyless(yyleng-1);
-                    /* recortar espacios finales usando yyless (Flex) */
-                    while (yyleng>0 && (yytext[yyleng-1]==' ' || yytext[yyleng-1]=='\t' || yytext[yyleng-1]=='\n' || yytext[yyleng-1]=='\r')) yyless(yyleng-1);
-                    /* guardar selector con strdup  */
+/* Selector: se reconoce justo antes de '{' (los espacios antes de '{' no se consumen) */
+<INITIAL>{SEL}+({WS}+{SEL}+)* / {WS}*"{" {
                     if (currentSelector) { free(currentSelector); currentSelector = NULL; }
                     currentSelector = strdup(yytext);
                     colorsInCurrentRule = 0;
                     propertiesInCurrentRule = 0;
-                    BEGIN(BLOCK);
+                    BEGIN(SELECTOR_END);
                 }
 
-<SELECTOR>{WS}+     { yymore(); }
-<SELECTOR>{SEL}     { yymore(); }
-<SELECTOR>"        { yymore(); BEGIN(SELECTOR_DQ); }
-<SELECTOR>'        { yymore(); BEGIN(SELECTOR_SQ); }
-<SELECTOR>.         { yymore(); }
-
-<SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
-<SELECTOR_DQ>"                  { yymore(); BEGIN(SELECTOR); }
-
-<SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
-<SELECTOR_SQ>'                  { yymore(); BEGIN(SELECTOR); }
-
-<SELECTOR>"/*"      { prevState = YY_START; BEGIN(COMMENT); }
+<SELECTOR_END>{WS}+  { }
+<SELECTOR_END>"{"   {
+                    if (insideMedia) mediaDepth++;
+                    BEGIN(BLOCK);
+                }
 
 <INITIAL>"{"       { 
     /* inicio de bloque: selector ya gestionado por yymore/yyless */
@@ -111,16 +91,16 @@ HEX8    \#[0-9A-Fa-f]{8}
     propertiesInCurrentRule=0; 
     BEGIN(BLOCK); 
 }
+<INITIAL>"}"       {
+    if (insideMedia) {
+        mediaDepth--;
+        if (mediaDepth <= 0) { insideMedia = 0; mediaDepth = 0; }
+    }
+}
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
 <BLOCK>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
-
-
-<BLOCK>"{"         {
-    colorsInCurrentRule=0; 
-    propertiesInCurrentRule=0;
-}
 <BLOCK>"}"      {
                     if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
                     if(propertiesInCurrentRule > maxPropertiesInRule) {
@@ -131,7 +111,10 @@ HEX8    \#[0-9A-Fa-f]{8}
                     if(propertiesInCurrentRule > 0) {
                         if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
                     }
-                    insideMedia = 0;
+                    if (insideMedia) {
+                        mediaDepth--;
+                        if (mediaDepth <= 0) { insideMedia = 0; mediaDepth = 0; }
+                    }
                     BEGIN(INITIAL);
                  }
 <BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
@@ -150,7 +133,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <SQSTR>"\'"     { BEGIN(VALUE); }
 
 <VALUE>"!"{WS}*"important" { importantCount++; }
-<VALUE>[0-9]+\.?[0-9]*{UNIT} { measureCount++; }
+<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT} { measureCount++; }
 
 <VALUE>{HEX8} { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX6} { colorCount++; colorsInCurrentRule++; }
@@ -158,9 +141,15 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>{COLORNAME}{NONWORD} { colorCount++; colorsInCurrentRule++; }
+<VALUE>{COLORNAME}({NONWORD}|$) {
+    if (yyleng > 0) {
+        unsigned char c = (unsigned char)yytext[yyleng-1];
+        if (!isalnum(c) && c != '_' && c != '-') yyless(yyleng-1);
+    }
+    colorCount++; colorsInCurrentRule++;
+}
 
-<VALUE>";"   { seenSemicolon = 1; BEGIN(BLOCK); }
+<VALUE>";"   { BEGIN(BLOCK); }
 <VALUE>.      { }
 
 %%
