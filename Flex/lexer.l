@@ -48,7 +48,7 @@ int rulesOutsideMedia = 0;
 WS      [ \t\r\n]+
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
-SEL     [a-zA-Z0-9_.#:\[\]()="'*,>+~-]+
+SEL     [a-zA-Z0-9_.#:\[\]()="'*,>+~\-\^\$\|\\]+
 
 NONWORD [^A-Za-z0-9_-]
 COLORNAME (black|gray|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
@@ -83,6 +83,7 @@ HEX8    \#[0-9A-Fa-f]{8}
                     if (insideMedia) mediaDepth++;
                     BEGIN(BLOCK);
                 }
+<SELECTOR_END>.      { }
 
 <INITIAL>"{"       { 
     /* inicio de bloque: selector ya gestionado por yymore/yyless */
