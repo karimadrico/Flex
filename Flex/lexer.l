@@ -36,18 +36,28 @@ int rulesOutsideMedia = 0;
 %option noyywrap
 
 /* Estados exclusivos */
-%x COMMENT_INITIAL
-%x COMMENT_BLOCK
-%x COMMENT_VALUE
-%x SELECTOR          
+%x COMMENT
+%x SELECTOR
 %x BLOCK
 %x VALUE
 %x DQSTR
 %x SQSTR
 
-"/*"                { BEGIN(COMMENT_INITIAL); }
-<COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
-<COMMENT_INITIAL>.|\n       { }
+/* Patrones básicos - AQUÍ ANTES DEL %% */
+WS      [ \t\r\n]+
+UNIT    (pt|mm|cm|pc|in|px|em|ex)
+IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
+SEL     [a-zA-Z0-9_.#:\[\]()="'* >+~-]+
+
+HEX3    \#[0-9A-Fa-f]{3}
+HEX6    \#[0-9A-Fa-f]{6}
+HEX8    \#[0-9A-Fa-f]{8}
+
+%%
+
+"/*"                { BEGIN(COMMENT); }
+<COMMENT>"*/"       { BEGIN(INITIAL); }
+<COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
 <INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
@@ -81,7 +91,7 @@ int rulesOutsideMedia = 0;
     BEGIN(BLOCK);
 }
 
-<SELECTOR>"/*"      { BEGIN(COMMENT_INITIAL); }
+<SELECTOR>"/*"      { BEGIN(COMMENT); }
 
 <INITIAL>"{"       { 
     currentSelector[0] = '\0';
@@ -93,9 +103,7 @@ int rulesOutsideMedia = 0;
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
-<BLOCK>"/*"     { BEGIN(COMMENT_BLOCK); }
-<COMMENT_BLOCK>"*/"       { BEGIN(BLOCK); }
-<COMMENT_BLOCK>.|\n       { }
+<BLOCK>"/*"     { BEGIN(COMMENT); }
 
 <BLOCK>"{"         {
     colorsInCurrentRule=0; 
@@ -114,9 +122,7 @@ int rulesOutsideMedia = 0;
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
-<VALUE>"/*"     { BEGIN(COMMENT_VALUE); }
-<COMMENT_VALUE>"*/"       { BEGIN(VALUE); }
-<COMMENT_VALUE>.|\n       { }
+<VALUE>"/*"     { BEGIN(COMMENT); }
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
