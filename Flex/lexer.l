@@ -149,8 +149,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
 
 /* nombres de color con delimitador no-palabra o fin de archivo */
-<VALUE>{COLORNAME}{NONWORD} { colorCount++; colorsInCurrentRule++; }
-<VALUE>{COLORNAME}$         { colorCount++; colorsInCurrentRule++; }
+<VALUE>{COLORNAME}({NONWORD}|$) { colorCount++; colorsInCurrentRule++; }
 
 <VALUE>";"   { seenSemicolon = 1; BEGIN(BLOCK); }
 <VALUE>.      { }
