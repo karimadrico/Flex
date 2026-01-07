@@ -84,46 +84,89 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
-<BLOCK>{WS}*{IDENT}{WS}*":"  {
+/* ---------------------- BLOQUE ---------------------- */
+<BLOCK>{WS}*{IDENT}":"      {
+    /* Contamos la propiedad */
     totalProperties++;
     propertiesInCurrentRule++;
+
+    /* Entramos en estado VALUE para leer el valor */
     BEGIN(VALUE);
 }
 
-<BLOCK>.                { }
+/* Ignoramos espacios dentro del bloque */
+<BLOCK>{WS}+                { }
 
-<VALUE>{WS}             { }
+/* Inicio de comentario dentro del bloque */
+<BLOCK>"/*"                 { BEGIN(COMMENT); }
 
-<VALUE>"\""             { BEGIN(DQSTR); }
-<DQSTR>"\\\\"           { }
-<DQSTR>"\\\""           { }
-<DQSTR>"\""             { BEGIN(VALUE); }
-<DQSTR>.|\n             { }
+/* Fin de bloque */
+<BLOCK>"}"                  {
+    /* Actualizamos máximos de propiedades y colores por regla */
+    if (colorsInCurrentRule > maxColorsInRule)
+        maxColorsInRule = colorsInCurrentRule;
 
-<VALUE>"\'"             { BEGIN(SQSTR); }
-<SQSTR>"\\\\"           { }
-<SQSTR>"\\\'"           { }
-<SQSTR>"\'"             { BEGIN(VALUE); }
-<SQSTR>.|\n             { }
+    if (propertiesInCurrentRule > maxPropertiesInRule)
+        maxPropertiesInRule = propertiesInCurrentRule;
 
+    /* Contamos reglas dentro/fuera de @media */
+    if (insideMedia)
+        rulesInsideMedia++;
+    else
+        rulesOutsideMedia++;
+
+    insideMedia = 0;
+
+    BEGIN(INITIAL);
+}
+
+/* Regla genérica para cualquier otro carácter */
+<BLOCK>.                    { }
+
+
+/* ---------------------- VALUE ---------------------- */
+
+/* Ignoramos espacios dentro del valor */
+<VALUE>{WS}+                { }
+
+/* Comentarios dentro del valor */
+<VALUE>"/*"                 { BEGIN(COMMENT); }
+
+/* Cadenas dobles */
+<VALUE>"\""                 { BEGIN(DQSTR); }
+<DQSTR>"\\\""               { }
+<DQSTR>"\""                 { BEGIN(VALUE); }
+<DQSTR>.|\n                 { }
+
+/* Cadenas simples */
+<VALUE>"\'"                 { BEGIN(SQSTR); }
+<SQSTR>"\\\'"               { }
+<SQSTR>"\'"                 { BEGIN(VALUE); }
+<SQSTR>.|\n                 { }
+
+/* Propiedades !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
+/* Valores con unidades */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-<VALUE>{HEX8}           { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX6}           { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX3}           { colorCount++; colorsInCurrentRule++; }
+/* Colores HEX */
+<VALUE>{HEX8}               { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX6}               { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX3}               { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>rgba?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
+/* Colores rgb / rgba */
+<VALUE>rgba?\([^)]*\)       { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>[ \t]*{COLORNAME}[ \t]*[;}]? { colorCount++; colorsInCurrentRule++; }
+/* Nombres de color */
+<VALUE>{COLORNAME}           { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>";"              { BEGIN(BLOCK); }
+/* Fin de propiedad */
+<VALUE>";"                  { BEGIN(BLOCK); }
 
+/* Regla genérica para cualquier otro carácter */
+<VALUE>.                     { }
 
-<VALUE>"/*"             { BEGIN(COMMENT); }
-
-<VALUE>.                { }
 
 %%
 
