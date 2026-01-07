@@ -2,6 +2,7 @@
 /* PRACTICA 1 - FLEX (Segunda Convocatoria Karima Drafli Rico) */
 
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 
 /* Contadores globales */
@@ -17,17 +18,17 @@ int maxColorsInRule = 0;
 int propertiesInCurrentRule = 0;
 int maxPropertiesInRule = 0;
 
-/* Selector */
+/* Selector con más propiedades */
 char maxSelector[512] = "";
-int maxSelectorProps = 0;
-
-/* Buffer para acumular selector actual */
 char currentSelector[512] = "";
 int selectorLen = 0;
 
+/* prevState para comentarios */
+int prevState = 0;
+
 /* Reglas dentro/fuera de media */
 int insideMedia = 0;
-int mediaDepth = 0;  
+int mediaDepth = 0;
 int rulesInsideMedia = 0;
 int rulesOutsideMedia = 0;
 %}
@@ -38,7 +39,7 @@ int rulesOutsideMedia = 0;
 %x COMMENT_INITIAL
 %x COMMENT_BLOCK
 %x COMMENT_VALUE
-%x SELECTOR          /* NUEVO: para capturar selectores */
+%x SELECTOR          
 %x BLOCK
 %x VALUE
 %x DQSTR
@@ -48,7 +49,7 @@ int rulesOutsideMedia = 0;
 WS      [ \t\r\n]+
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
-SEL     [a-zA-Z0-9_.#:\[\]()="'* >+~-]+    /* NUEVO: patrón para selectores CSS */
+SEL     [a-zA-Z0-9_.#:\[\]()="'* >+~-]+    
 
 HEX3        \#[0-9A-Fa-f]{3}
 HEX6        \#[0-9A-Fa-f]{6}
