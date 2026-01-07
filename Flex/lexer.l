@@ -2,7 +2,7 @@
 /*
  * PRÁCTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
  */
- 
+
 #include <stdio.h>
 #include <ctype.h>
 
@@ -81,15 +81,14 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <VALUE>{WS}+            { }
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-/* Cadenas dobles */
-<VALUE>"\""             { BEGIN(DQSTR); }
-<DQSTR>[^"]+            { }
-<DQSTR>"\""             { BEGIN(VALUE); }
+<VALUE>"\""     { BEGIN(DQSTR); }
+<DQSTR>[^"]+    { }
+<DQSTR>"\""     { BEGIN(VALUE); }
 
-/* Cadenas simples */
-<VALUE>"\'"             { BEGIN(SQSTR); }
-<SQSTR>[^']+            { }
-<SQSTR>"\'"             { BEGIN(VALUE); }
+<VALUE>"\'"     { BEGIN(SQSTR); }
+<SQSTR>[^']+    { }
+<SQSTR>"\'"     { BEGIN(VALUE); }
+
 
 /* Propiedades !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
