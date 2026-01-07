@@ -76,10 +76,6 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <INITIAL>{SEL}      { yymore(); BEGIN(SELECTOR); }
 
-<SELECTOR>{WS}+     { yymore(); }
-<SELECTOR>{SEL}     { yymore(); }
-<SELECTOR>.         { yymore(); }
-
 <SELECTOR>"{"     {
                     /* quitar '{' del lexema actual */
                     yyless(yyleng-1);
@@ -92,6 +88,10 @@ HEX8    \#[0-9A-Fa-f]{8}
                     propertiesInCurrentRule = 0;
                     BEGIN(BLOCK);
                 }
+
+<SELECTOR>{WS}+     { yymore(); }
+<SELECTOR>{SEL}     { yymore(); }
+<SELECTOR>.         { yymore(); }
 
 <SELECTOR>"/*"      { prevState = YY_START; BEGIN(COMMENT); }
 
@@ -148,8 +148,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
 
-/* nombres de color con delimitador no-palabra o fin de archivo (expresado inline) */
-<VALUE>(black|gray|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)([^A-Za-z0-9_-]|$) { colorCount++; colorsInCurrentRule++; }
+<VALUE>{COLORNAME}{NONWORD} { colorCount++; colorsInCurrentRule++; }
 
 <VALUE>";"   { seenSemicolon = 1; BEGIN(BLOCK); }
 <VALUE>.      { }
