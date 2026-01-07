@@ -45,22 +45,6 @@ int rulesOutsideMedia = 0;
 %x DQSTR
 %x SQSTR
 
-/* Patrones básicos */
-WS      [ \t\r\n]+
-UNIT    (pt|mm|cm|pc|in|px|em|ex)
-IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
-SEL     [a-zA-Z0-9_.#:\[\]()="'* >+~-]+    
-
-HEX3        \#[0-9A-Fa-f]{3}
-HEX6        \#[0-9A-Fa-f]{6}
-HEX8        \#[0-9A-Fa-f]{8}
-
-COLORNAME   (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
-RGBFN       rgb\([0-9% ,\.]*\)
-RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
-
-%%
-
 "/*"                { BEGIN(COMMENT_INITIAL); }
 <COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
 <COMMENT_INITIAL>.|\n       { }
@@ -149,8 +133,26 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <VALUE>{HEX6} { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX3} { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>rgb\([0-9% ,\.]*\) { colorCount++; colorsInCurrentRule++; }
-<VALUE>rgba\([0-9% ,\.]*,[0-9\.]*\) { colorCount++; colorsInCurrentRule++; }
+<VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
+
+<VALUE>black/[ \t\r\n;,)\}]    { colorCount++; colorsInCurrentRule++; }
+<VALUE>gray/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>grey/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>silver/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
+<VALUE>white/[ \t\r\n;,)\}]    { colorCount++; colorsInCurrentRule++; }
+<VALUE>maroon/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
+<VALUE>red/[ \t\r\n;,)\}]      { colorCount++; colorsInCurrentRule++; }
+<VALUE>purple/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
+<VALUE>fuchsia/[ \t\r\n;,)\}]  { colorCount++; colorsInCurrentRule++; }
+<VALUE>green/[ \t\r\n;,)\}]    { colorCount++; colorsInCurrentRule++; }
+<VALUE>lime/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>olive/[ \t\r\n;,)\}]    { colorCount++; colorsInCurrentRule++; }
+<VALUE>yellow/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
+<VALUE>navy/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>blue/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>teal/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>aqua/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
+<VALUE>orange/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
 
 <VALUE>";"   { BEGIN(BLOCK); }
 <VALUE>.      { }
