@@ -1,25 +1,23 @@
 %{
-/* PRACTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
-*/
+/* PRACTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico */
+/*  SECCION DEFINICIONES */
+/*  INICIALIZAMOS LAS VARIABLES GLOBALES */
 
-/* Contadores globales */
+/* Variables globales */
 int mediaBlocks = 0;
 int totalProperties = 0;
 int importantCount = 0;
 int measureCount = 0;
 int colorCount = 0;
 
-/* Colores y propiedades por regla */
 int colorsInCurrentRule = 0;
 int maxColorsInRule = 0;
 int propertiesInCurrentRule = 0;
 int maxPropertiesInRule = 0;
 
-/* Reglas dentro/fuera de media */
 int insideMedia = 0;
 int rulesInsideMedia = 0;
 int rulesOutsideMedia = 0;
-
 %}
 
 %option noyywrap
@@ -30,35 +28,32 @@ int rulesOutsideMedia = 0;
 %x DQSTR
 %x SQSTR
 
-/* Patrones */
-WS              [ \t\r\n]+
-UNIT            (pt|mm|cm|pc|in|px|em|ex)
-IDENT           [a-zA-Z_-][a-zA-Z0-9_-]*
+WS      [ \t\r\n]+
+UNIT    (pt|mm|cm|pc|in|px|em|ex)
+IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
 
-HEX3            \#[0-9A-Fa-f]{3}
-HEX6            \#[0-9A-Fa-f]{6}
-HEX8            \#[0-9A-Fa-f]{8}
+HEX3        \#[0-9A-Fa-f]{3}
+HEX6        \#[0-9A-Fa-f]{6}
+HEX8        \#[0-9A-Fa-f]{8}
 
-COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
-
-/* RGB y RGBA seguros para Flex */
-RGBFN           rgb\([0-9% ,\.]*\)
-RGBAFN          rgba\([0-9% ,\.]*,[0-9\.]*\)
+COLORNAME   (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
+RGBFN       rgb\([0-9% ,\.]*\)
+RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 %%
 
-/* ------------------ COMENTARIOS ------------------ */
+// COMENTARIOS
 "/*"                { BEGIN(COMMENT); }
 <COMMENT>"*/"       { BEGIN(INITIAL); }
 <COMMENT>.|\n       { }
 
-/* ------------------ INICIAL ------------------ */
+// INICIAL
 <INITIAL>{WS}+      { }
 <INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
 <INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
 <INITIAL>.          { }
 
-/* ------------------ BLOQUE ------------------ */
+// BLOQUE
 <BLOCK>{WS}+        { }
 <BLOCK>"/*"          { BEGIN(COMMENT); }
 
@@ -70,15 +65,13 @@ RGBAFN          rgba\([0-9% ,\.]*,[0-9\.]*\)
                         BEGIN(INITIAL);
                      }
 
-/* Propiedad: nombre: */
 <BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
 <BLOCK>.             { }
 
-/* ------------------ VALOR ------------------ */
+// VALOR
 <VALUE>{WS}+         { }
 <VALUE>"/*"           { BEGIN(COMMENT); }
 
-/* Cadenas */
 <VALUE>"\""           { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)*  { }
 <DQSTR>"\""           { BEGIN(VALUE); }
@@ -87,27 +80,18 @@ RGBAFN          rgba\([0-9% ,\.]*,[0-9\.]*\)
 <SQSTR>([^'\\\n]+|\\.)*  { }
 <SQSTR>"\'"           { BEGIN(VALUE); }
 
-/* Propiedades !important */
 <VALUE>"!"{WS}*"important" { importantCount++; }
-
-/* Valores con unidades */
 <VALUE>[0-9]+\.?[0-9]*{UNIT} { measureCount++; }
 
-/* Colores HEX */
 <VALUE>{HEX8}        { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX6}        { colorCount++; colorsInCurrentRule++; }
 <VALUE>{HEX3}        { colorCount++; colorsInCurrentRule++; }
 
-/* Colores RGB/RGBA */
 <VALUE>{RGBFN}       { colorCount++; colorsInCurrentRule++; }
 <VALUE>{RGBAFN}      { colorCount++; colorsInCurrentRule++; }
 
-/* Colores por nombre */
 <VALUE>{COLORNAME}   { colorCount++; colorsInCurrentRule++; }
-
-/* Fin de propiedad */
 <VALUE>";"           { BEGIN(BLOCK); }
-
 <VALUE>.              { }
 
 %%
