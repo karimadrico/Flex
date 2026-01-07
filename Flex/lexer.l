@@ -1,26 +1,22 @@
 %{
-/* PRACTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
-*/
+/* PRÁCTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico */
 
 #include <stdio.h>
 
-/* Contadores globales */
-static int mediaBlocks = 0;
-static int totalProperties = 0;
-static int importantCount = 0;
-static int measureCount = 0;
-static int colorCount = 0;
+/* Contadores para estadísticas */
+int mediaBlocks = 0;
+int totalProperties = 0;
+int maxPropertiesInRule = 0;
+int importantCount = 0;
+int measureCount = 0;
+int colorCount = 0;
+int maxColorsInRule = 0;
 
-/* Colores y propiedades por regla */
-static int colorsInCurrentRule = 0;
-static int maxColorsInRule = 0;
-static int propertiesInCurrentRule = 0;
-static int maxPropertiesInRule = 0;
-
-/* Reglas dentro/fuera de media */
-static int insideMedia = 0;
-static int rulesInsideMedia = 0;
-static int rulesOutsideMedia = 0;
+int propertiesInCurrentRule = 0;
+int colorsInCurrentRule = 0;
+int insideMedia = 0;
+int rulesInsideMedia = 0;
+int rulesOutsideMedia = 0;
 %}
 
 %option noyywrap
@@ -31,59 +27,56 @@ static int rulesOutsideMedia = 0;
 %x DQSTR
 %x SQSTR
 
-/* Patrones */
-WS              [ \t\r\n]+
-UNIT            (pt|mm|cm|pc|in|px|em|ex)
-IDENT           [a-zA-Z_-][a-zA-Z0-9_-]*
+WS        [ \t\r\n]+
+UNIT      (pt|mm|cm|pc|in|px|em|ex)
+IDENT     [a-zA-Z_-][a-zA-Z0-9_-]*
 
-HEX3            \#[0-9A-Fa-f]{3}
-HEX6            \#[0-9A-Fa-f]{6}
-HEX8            \#[0-9A-Fa-f]{8}
+HEX3      #[0-9A-Fa-f]{3}
+HEX6      #[0-9A-Fa-f]{6}
+HEX8      #[0-9A-Fa-f]{8}
 
-COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
-
-RGBFN           rgb\([0-9%,. ]*\)
-RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
+COLORNAME (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
 
 %%
 
-/* ------------------ COMENTARIOS ------------------ */
-"/*"                { BEGIN(COMMENT); }
-<COMMENT>"*/"       { BEGIN(INITIAL); }
-<COMMENT>.|\n       { }
+/* ------------------------ Comentarios ------------------------ */
+"/*"                     { BEGIN(COMMENT); }
+<COMMENT>"*/"             { BEGIN(INITIAL); }
+<COMMENT>.|\n             { }
 
-/* ------------------ INICIAL ------------------ */
-<INITIAL>{WS}+      { }
-<INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
-<INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
-<INITIAL>.          { }
+/* ------------------------ Inicial ------------------------ */
+<INITIAL>@media            { mediaBlocks++; insideMedia = 1; }
+<INITIAL>{WS}+             { }
+<INITIAL>"{"              { propertiesInCurrentRule = 0; colorsInCurrentRule = 0; BEGIN(BLOCK); }
+<INITIAL>.                 { }
 
-/* ------------------ BLOQUE ------------------ */
-<BLOCK>{WS}+        { }
-<BLOCK>"/*"          { BEGIN(COMMENT); }
-<BLOCK>"}"          {
-                        if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
-                        if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
-                        if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
-                        insideMedia = 0;
-                        BEGIN(INITIAL);
-                     }
-/* Propiedad: nombre: */
-<BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
-<BLOCK>.             { }
+/* ------------------------ Bloque ------------------------ */
+<BLOCK>{WS}+               { }
+<BLOCK>"/*"                { BEGIN(COMMENT); }
 
-/* ------------------ VALOR ------------------ */
-<VALUE>{WS}+         { }
-<VALUE>"/*"           { BEGIN(COMMENT); }
+<BLOCK>{IDENT}{WS}*":"     { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
+<BLOCK>"}"                 {
+                               if(propertiesInCurrentRule>maxPropertiesInRule) maxPropertiesInRule=propertiesInCurrentRule;
+                               if(colorsInCurrentRule>maxColorsInRule) maxColorsInRule=colorsInCurrentRule;
+                               if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
+                               insideMedia=0;
+                               BEGIN(INITIAL);
+                           }
+<BLOCK>.                    { }
 
-/* Cadenas */
-<VALUE>"\""           { BEGIN(DQSTR); }
-<DQSTR>[^"]+          { }
-<DQSTR>"\""           { BEGIN(VALUE); }
+/* ------------------------ VALUE ------------------------ */
+<VALUE>{WS}+               { }
+<VALUE>"/*"                { BEGIN(COMMENT); }
 
-<VALUE>"\'"           { BEGIN(SQSTR); }
-<SQSTR>[^']+          { }
-<SQSTR>"\'"           { BEGIN(VALUE); }
+/* Cadenas dobles */
+<VALUE>"\""                { BEGIN(DQSTR); }
+<DQSTR>([^"\\]|\\.)*      { }
+<DQSTR>"\""                { BEGIN(VALUE); }
+
+/* Cadenas simples */
+<VALUE>"\'"                { BEGIN(SQSTR); }
+<SQSTR>([^'\\]|\\.)*      { }
+<SQSTR>"\'"                { BEGIN(VALUE); }
 
 /* Propiedades !important */
 <VALUE>"!"{WS}*"important" { importantCount++; }
@@ -92,26 +85,24 @@ RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
 <VALUE>[0-9]+\.?[0-9]*{UNIT} { measureCount++; }
 
 /* Colores HEX */
-<VALUE>{HEX8}        { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX6}        { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX3}        { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX8}              { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX6}              { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX3}              { colorCount++; colorsInCurrentRule++; }
 
-/* Colores RGB/RGBA */
-<VALUE>{RGBFN}       { colorCount++; colorsInCurrentRule++; }
-<VALUE>{RGBAFN}      { colorCount++; colorsInCurrentRule++; }
+/* Colores RGB / RGBA */
+<VALUE>rgb(a)?\([^\)]*\)   { colorCount++; colorsInCurrentRule++; }
 
-/* Colores por nombre */
-<VALUE>{COLORNAME}   { colorCount++; colorsInCurrentRule++; }
+/* Nombres de color */
+<VALUE>{COLORNAME}          { colorCount++; colorsInCurrentRule++; }
 
 /* Fin de propiedad */
-<VALUE>";"           { BEGIN(BLOCK); }
-
-<VALUE>.              { }
+<VALUE>";"                 { BEGIN(BLOCK); }
+<VALUE>.                    { }
 
 %%
 
 int main(int argc, char **argv) {
-    if(argc>1) yyin=fopen(argv[1],"r");
+    if(argc>1) yyin = fopen(argv[1],"r");
     yylex();
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
