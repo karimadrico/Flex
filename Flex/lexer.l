@@ -41,6 +41,8 @@ int rulesOutsideMedia = 0;
 /* Estados exclusivos */
 %x COMMENT
 %x SELECTOR
+%x SELECTOR_DQ
+%x SELECTOR_SQ
 %x BLOCK
 %x VALUE
 %x DQSTR
@@ -91,7 +93,15 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <SELECTOR>{WS}+     { yymore(); }
 <SELECTOR>{SEL}     { yymore(); }
+<SELECTOR>"        { yymore(); BEGIN(SELECTOR_DQ); }
+<SELECTOR>'        { yymore(); BEGIN(SELECTOR_SQ); }
 <SELECTOR>.         { yymore(); }
+
+<SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
+<SELECTOR_DQ>"                  { yymore(); BEGIN(SELECTOR); }
+
+<SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
+<SELECTOR_SQ>'                  { yymore(); BEGIN(SELECTOR); }
 
 <SELECTOR>"/*"      { prevState = YY_START; BEGIN(COMMENT); }
 
