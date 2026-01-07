@@ -53,6 +53,7 @@ IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
 SEL     [a-zA-Z0-9_.#:\[\]()=*,>+~\-\^\$\|\\,]+
 
 NONWORD [^A-Za-z0-9_-]
+NONHEX  [^0-9A-Fa-f]
 COLORNAME (black|gray|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
 
 HEX3    \#[0-9A-Fa-f]{3}
@@ -143,11 +144,18 @@ HEX8    \#[0-9A-Fa-f]{8}
 <SQSTR>"\'"     { BEGIN(VALUE); }
 
 <VALUE>"!"{WS}*"important" { importantCount++; }
-<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT} { measureCount++; }
+<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT}({NONWORD}|$) {
+    if (yyleng > 0) {
+        unsigned char c = (unsigned char)yytext[yyleng-1];
+        if (!isalnum(c) && c != '_' && c != '-') yyless(yyleng-1);
+    }
+    measureCount++;
+}
 
-<VALUE>{HEX8} { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX6} { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX3} { colorCount++; colorsInCurrentRule++; }
+<VALUE>({HEX8}|{HEX6}|{HEX3})({NONHEX}|$) {
+    if (yyleng > 0 && !isxdigit((unsigned char)yytext[yyleng-1])) yyless(yyleng-1);
+    colorCount++; colorsInCurrentRule++;
+}
 
 <VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
 
