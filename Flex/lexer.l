@@ -103,7 +103,8 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <VALUE>{HEX3}           { colorCount++; colorsInCurrentRule++; }
 
 
-<VALUE>rgb(a)?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
+<VALUE>rgb(a)?\([^\n]*\)   { colorCount++; colorsInCurrentRule++; }
+
 
 
 <VALUE>{COLORNAME}       { colorCount++; colorsInCurrentRule++; }
