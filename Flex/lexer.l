@@ -38,7 +38,9 @@ int rulesOutsideMedia = 0;
 /* Estados exclusivos */
 %x COMMENT
 %x MEDIA_HDR
-%x SELECTOR_END
+%x SELECTOR
+%x SELECTOR_DQ
+%x SELECTOR_SQ
 %x BLOCK
 %x VALUE
 %x DQSTR
@@ -59,7 +61,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 %%
 
-<INITIAL,MEDIA_HDR,SELECTOR_END,BLOCK,VALUE>"/*"  { prevState = YY_START; BEGIN(COMMENT); }
+<INITIAL,MEDIA_HDR,SELECTOR,BLOCK,VALUE>"/*"  { prevState = YY_START; BEGIN(COMMENT); }
 <COMMENT>"*/"       { 
                                                 BEGIN(prevState);
                                             }
@@ -70,20 +72,30 @@ HEX8    \#[0-9A-Fa-f]{8}
 <MEDIA_HDR>"{"      { insideMedia = 1; mediaDepth = 1; BEGIN(INITIAL); }
 <MEDIA_HDR>.|\n      { }
 
-<INITIAL>{SEL}+({WS}+{SEL}+)* {
+<INITIAL>{SEL}      { yymore(); BEGIN(SELECTOR); }
+
+<SELECTOR>"{"     {
+                    /* quitar '{' del lexema actual */
+                    yyless(yyleng-1);
                     if (currentSelector) { free(currentSelector); currentSelector = NULL; }
                     currentSelector = strdup(yytext);
                     colorsInCurrentRule = 0;
                     propertiesInCurrentRule = 0;
-                    BEGIN(SELECTOR_END);
-                }
-
-<SELECTOR_END>{WS}+  { }
-<SELECTOR_END>"{"   {
                     if (insideMedia) mediaDepth++;
                     BEGIN(BLOCK);
                 }
-<SELECTOR_END>.      { }
+
+<SELECTOR>{WS}+     { /* ignorar espacios en selector para evitar trims */ }
+<SELECTOR>{SEL}     { yymore(); }
+<SELECTOR>"        { yymore(); BEGIN(SELECTOR_DQ); }
+<SELECTOR>'        { yymore(); BEGIN(SELECTOR_SQ); }
+<SELECTOR>.         { yymore(); }
+
+<SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
+<SELECTOR_DQ>"                  { yymore(); BEGIN(SELECTOR); }
+
+<SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
+<SELECTOR_SQ>'                  { yymore(); BEGIN(SELECTOR); }
 
 <INITIAL>"{"       { 
     /* inicio de bloque: selector ya gestionado por yymore/yyless */
