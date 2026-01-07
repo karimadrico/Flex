@@ -65,14 +65,20 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 <COMMENT>"*/"   { BEGIN(INITIAL); }
 <COMMENT>.|\n   { }
 
-<INITIAL>{WS}+  { }
-<INITIAL>"@media" { mediaBlocks++; insideMedia = 1; }
-<INITIAL>"{"       { 
-    colorsInCurrentRule=0; 
-    propertiesInCurrentRule=0; 
-    BEGIN(BLOCK); 
+<INITIAL>{WS}+      { }
+<INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
+
+<INITIAL>{SEL}      {
+    selectorLen = 0;
+    if (yyleng < sizeof(currentSelector)) {
+        memcpy(currentSelector, yytext, yyleng);
+        selectorLen = yyleng;
+    }
+    BEGIN(SELECTOR);
 }
-<INITIAL>.      { }
+
+<INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
+<INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
 <BLOCK>"/*"     { BEGIN(COMMENT); }
