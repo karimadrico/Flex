@@ -73,26 +73,18 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 <INITIAL>.              { }
 
     /* Dentro de bloque: orden de reglas específico a genérico */
-<BLOCK>{WS}             { 
-    fprintf(stderr, "WS[%d]\n", yyleng);
-}
+<BLOCK>{WS}             { }
 
-<BLOCK>"}"              { 
-    fprintf(stderr, "CIERRE } (total=%d)\n", totalProperties);
-    BEGIN(INITIAL); 
-}
+<BLOCK>"}"              { BEGIN(INITIAL); }
 
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
-    /* Detectar propiedad antes del catch-all */
 <BLOCK>[a-zA-Z-]+{WS}*":"  { 
     totalProperties++;
-    fprintf(stderr, "PROP #%d: %s\n", totalProperties, yytext);
     BEGIN(VALUE);
 }
 
-    /* Ignorar otros caracteres no reconocidos */
-<BLOCK>.                { }
+/* SIN catch-all en BLOCK */
 
     /* Analizar valores de propiedades */
 <VALUE>{WS}             { }
