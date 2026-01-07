@@ -77,7 +77,35 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
     BEGIN(SELECTOR);
 }
 
-<INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
+<SELECTOR>{WS}+     {
+    if (selectorLen < sizeof(currentSelector) - 1) {
+        currentSelector[selectorLen++] = ' ';
+    }
+}
+
+<SELECTOR>{SEL}     {
+    if (selectorLen + yyleng < sizeof(currentSelector)) {
+        memcpy(currentSelector + selectorLen, yytext, yyleng);
+        selectorLen += yyleng;
+    }
+}
+
+<SELECTOR>"{"       {
+    currentSelector[selectorLen] = '\0';
+    colorsInCurrentRule = 0;
+    propertiesInCurrentRule = 0;
+    BEGIN(BLOCK);
+}
+
+<SELECTOR>"/*"      { BEGIN(COMMENT_INITIAL); }
+
+<INITIAL>"{"       { 
+    currentSelector[0] = '\0';
+    selectorLen = 0;
+    colorsInCurrentRule=0; 
+    propertiesInCurrentRule=0; 
+    BEGIN(BLOCK); 
+}
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
