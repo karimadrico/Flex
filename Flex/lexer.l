@@ -13,7 +13,6 @@ static int importantCount = 0;
 static int measureCount = 0;        
 static int colorCount = 0;
 
-static int prevState = INITIAL;  /* Para recordar el estado anterior */
 %}
 
 /* OPCIONES */
@@ -31,6 +30,8 @@ WS              [ \t\r\n]+
 UNIT            (pt|mm|cm|pc|in|px|em|ex)
 NONWORD         [^A-Za-z0-9_-]
 
+IDENT           [a-zA-Z_-][a-zA-Z0-9_-]*
+
 HEX3            #[0-9A-Fa-f]{3}
 HEX6            #[0-9A-Fa-f]{6}
 HEX8            #[0-9A-Fa-f]{8}
@@ -39,107 +40,95 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 %%
 
-    /* Comentarios CSS */
-"/*"                    { prevState = INITIAL; BEGIN(COMMENT); }
-<BLOCK>"/*"             { prevState = BLOCK; BEGIN(COMMENT); }
-<VALUE>"/*"             { prevState = VALUE; BEGIN(COMMENT); }
-
-<COMMENT>"*/"           { BEGIN(prevState); }
+/*     COMENTARIOS */
+"/*"                    { BEGIN(COMMENT); }
+<COMMENT>"*/"           { BEGIN(INITIAL); }
 <COMMENT>.|\n           { }
 
-    /* Detectar bloques @media */
+/*      @media BLOQUES */
 <INITIAL>"@media"       { mediaBlocks++; }
 
-    /* Ignorar espacios en estado inicial */
+/*         INICIAL */
 <INITIAL>{WS}           { }
 
-    /* Detectar inicio de bloque */
 <INITIAL>"{"            { 
-    fprintf(stderr, "{ ABRE\n");
     BEGIN(BLOCK); 
 }
 
-    /* Ignorar otros caracteres */
 <INITIAL>.              { }
 
-    /* Dentro de bloque: orden específico a genérico */
+/*       BLOQUE CSS */
 <BLOCK>{WS}             { }
 
+/* cierre de bloque */
 <BLOCK>"}"              { 
-    fprintf(stderr, "} CIERRE (total=%d)\n", totalProperties);
     BEGIN(INITIAL); 
 }
 
+/* comentario dentro de bloque */
 <BLOCK>"/*"             { BEGIN(COMMENT); }
 
-    /* Detectar propiedad */
-<BLOCK>[a-zA-Z-]+{WS}*":"  { 
+/* PROPIEDADES 
+   permite espacios al inicio e indentación */
+<BLOCK>{WS}*{IDENT}{WS}*":"  { 
     totalProperties++;
-    fprintf(stderr, "PROP #%d: %s\n", totalProperties, yytext);
     BEGIN(VALUE);
 }
 
-    /* Catch-all necesario */
+/* catch-all — SIEMPRE EL ÚLTIMO */
 <BLOCK>.                { }
 
-    /* Analizar valores de propiedades */
+/*     VALORES */
 <VALUE>{WS}             { }
 
-    /* Cadenas entre comillas dobles */
+/* cadenas dobles */
 <VALUE>"\""             { BEGIN(DQSTR); }
 <DQSTR>"\\\\"           { }
 <DQSTR>"\\\""           { }
 <DQSTR>"\""             { BEGIN(VALUE); }
 <DQSTR>.|\n             { }
 
-    /* Cadenas entre comillas simples */
+/* cadenas simples */
 <VALUE>"\'"             { BEGIN(SQSTR); }
 <SQSTR>"\\\\"           { }
 <SQSTR>"\\\'"           { }
 <SQSTR>"\'"             { BEGIN(VALUE); }
 <SQSTR>.|\n             { }
 
-    /* Declaración !important */
+/* !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
-    /* Unidades de medida */
+/* unidades */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-    /* Colores hexadecimales */
+/* colores HEX */
 <VALUE>{HEX8}           { colorCount++; }
 <VALUE>{HEX6}           { colorCount++; }
 <VALUE>{HEX3}           { colorCount++; }
 
-    /* Funciones RGB y RGBA */
+/* rgb/rgba */
 <VALUE>rgba?\([^)]*\)   { colorCount++; }
 
-    /* Nombres de color con lookhead */
+/* color por nombre */
 <VALUE>{COLORNAME}({NONWORD}|$) {
-    if (yyleng > 0) {
-        unsigned char c = (unsigned char)yytext[yyleng-1];
-        if (isalnum(c) || c == '_' || c == '-') {
-            yyless(yyleng - 1);
-        }
-    }
     colorCount++;
 }
 
-    /* Fin de valor: ANTES del catch-all */
+/* fin de valor */
 <VALUE>";"              { 
-    fprintf(stderr, ";\n");
     BEGIN(BLOCK); 
 }
 
-    /* Comentarios dentro de valores */
+/* comentarios dentro de valores */
 <VALUE>"/*"             { BEGIN(COMMENT); }
 
-    /* Catch-all para VALUE */
+/* resto del valor */
 <VALUE>.                { }
 
 %%
 
-/* MAIN */
 int main(int argc, char **argv) {
+
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
         if (!yyin) {
@@ -147,15 +136,15 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    
+
     yylex();
-    
+
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     printf("6. Número de especificaciones de color: %d\n", colorCount);
-    
+
     if (argc > 1) fclose(yyin);
     return 0;
 }
