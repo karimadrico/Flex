@@ -13,6 +13,7 @@ static int importantCount = 0;
 static int measureCount = 0;        
 static int colorCount = 0;
 
+static int prevState = INITIAL;  /* Para recordar el estado anterior */
 %}
 
 /* OPCIONES */
@@ -39,8 +40,11 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 %%
 
     /* Comentarios CSS */
-"/*"                    { BEGIN(COMMENT); }
-<COMMENT>"*/"           { BEGIN(INITIAL); }
+"/*"                    { prevState = INITIAL; BEGIN(COMMENT); }
+<BLOCK>"/*"             { prevState = BLOCK; BEGIN(COMMENT); }
+<VALUE>"/*"             { prevState = VALUE; BEGIN(COMMENT); }
+
+<COMMENT>"*/"           { BEGIN(prevState); }
 <COMMENT>.|\n           { }
 
     /* Detectar bloques @media */
