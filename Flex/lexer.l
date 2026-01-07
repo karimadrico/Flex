@@ -55,6 +55,9 @@ HEX3        \#[0-9A-Fa-f]{3}
 HEX6        \#[0-9A-Fa-f]{6}
 HEX8        \#[0-9A-Fa-f]{8}
 
+COLORNAME   (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
+RGBFN       rgb\([0-9% ,\.]*\)
+RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 %%
 
