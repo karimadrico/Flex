@@ -26,6 +26,9 @@ int selectorLen = 0;
 /* prevState para comentarios */
 int prevState = 0;
 
+/* Aux para comentarios/valores */
+int seenSemicolon = 0;
+
 /* Reglas dentro/fuera de media */
 int insideMedia = 0;
 int mediaDepth = 0;
@@ -55,8 +58,14 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 %%
 
-"/*"                { prevState = YYSTATE; BEGIN(COMMENT); }
-<COMMENT>"*/"       { BEGIN(prevState); }
+"/*"                { prevState = YY_START; BEGIN(COMMENT); }
+<COMMENT>"*/"       { 
+                                                BEGIN(prevState);
+                                                if (prevState == VALUE && seenSemicolon) {
+                                                        seenSemicolon = 0;
+                                                        BEGIN(BLOCK);
+                                                }
+                                            }
 <COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
@@ -91,7 +100,7 @@ HEX8    \#[0-9A-Fa-f]{8}
     BEGIN(BLOCK);
 }
 
-<SELECTOR>"/*"      { prevState = YYSTATE; BEGIN(COMMENT); }
+<SELECTOR>"/*"      { prevState = YY_START; BEGIN(COMMENT); }
 
 <INITIAL>"{"       { 
     currentSelector[0] = '\0';
@@ -103,7 +112,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
-<BLOCK>"/*"     { prevState = YYSTATE; BEGIN(COMMENT); }
+<BLOCK>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
 
 <BLOCK>"{"         {
     colorsInCurrentRule=0; 
@@ -122,7 +131,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
-<VALUE>"/*"     { prevState = YYSTATE; BEGIN(COMMENT); }
+<VALUE>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
@@ -160,7 +169,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <VALUE>aqua/[ \t\r\n;,)\}]     { colorCount++; colorsInCurrentRule++; }
 <VALUE>orange/[ \t\r\n;,)\}]   { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>";"   { BEGIN(BLOCK); }
+<VALUE>";"   { seenSemicolon = 1; BEGIN(BLOCK); }
 <VALUE>.      { }
 
 %%
