@@ -87,15 +87,15 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <SELECTOR>{WS}+     { /* ignorar espacios en selector para evitar trims */ }
 <SELECTOR>{SEL}     { yymore(); }
-<SELECTOR>"        { yymore(); BEGIN(SELECTOR_DQ); }
-<SELECTOR>'        { yymore(); BEGIN(SELECTOR_SQ); }
+<SELECTOR>"\""    { yymore(); BEGIN(SELECTOR_DQ); }
+<SELECTOR>"'"      { yymore(); BEGIN(SELECTOR_SQ); }
 <SELECTOR>.         { yymore(); }
 
 <SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
-<SELECTOR_DQ>"                  { yymore(); BEGIN(SELECTOR); }
+<SELECTOR_DQ>"\""             { yymore(); BEGIN(SELECTOR); }
 
 <SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
-<SELECTOR_SQ>'                  { yymore(); BEGIN(SELECTOR); }
+<SELECTOR_SQ>"'"               { yymore(); BEGIN(SELECTOR); }
 
 <INITIAL>"{"       { 
     /* inicio de bloque: selector ya gestionado por yymore/yyless */
