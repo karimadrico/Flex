@@ -6,32 +6,38 @@
 #include <stdio.h>
 #include <ctype.h>
 
-/* CONTADORES GLOBALES */
-static int mediaBlocks = 0;         
-static int totalProperties = 0;     
-static int importantCount = 0;      
-static int measureCount = 0;        
+static int mediaBlocks = 0;
+static int totalProperties = 0;
+static int importantCount = 0;
+static int measureCount = 0;
 static int colorCount = 0;
+
+/* colores por regla */
+static int colorsInCurrentRule = 0;
+static int maxColorsInRule = 0;
+
+/* propiedades por regla */
+static int propertiesInCurrentRule = 0;
+static int maxPropertiesInRule = 0;
+
+/* reglas dentro / fuera de media */
+static int insideMedia = 0;
+static int rulesInsideMedia = 0;
+static int rulesOutsideMedia = 0;
 
 %}
 
-/* OPCIONES */
 %option noyywrap
 
-/* ESTADOS */
-%x COMMENT_INITIAL
-%x COMMENT_BLOCK
-%x COMMENT_VALUE
+%x COMMENT
 %x BLOCK
 %x VALUE
 %x DQSTR
 %x SQSTR
 
-/* PATRONES */
 WS              [ \t\r\n]+
 UNIT            (pt|mm|cm|pc|in|px|em|ex)
 NONWORD         [^A-Za-z0-9_-]
-
 IDENT           [a-zA-Z_-][a-zA-Z0-9_-]*
 
 HEX3            #[0-9A-Fa-f]{3}
@@ -42,98 +48,89 @@ COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|li
 
 %%
 
-/*     COMENTARIOS - Estados específicos por contexto */
-"/*"                        { BEGIN(COMMENT_INITIAL); }
-<COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
-<COMMENT_INITIAL>.|\n       { }
+"/*"                    { BEGIN(COMMENT); }
+<COMMENT>"*/"           { BEGIN(INITIAL); }
+<COMMENT>.|\n           { }
 
-<BLOCK>"/*"                 { BEGIN(COMMENT_BLOCK); }
-<COMMENT_BLOCK>"*/"         { BEGIN(BLOCK); }
-<COMMENT_BLOCK>.|\n         { }
+<INITIAL>"@media"       { mediaBlocks++; insideMedia = 1; }
 
-<VALUE>"/*"                 { BEGIN(COMMENT_VALUE); }
-<COMMENT_VALUE>"*/"         { BEGIN(VALUE); }
-<COMMENT_VALUE>.|\n         { }
+<INITIAL>{WS}           { }
 
-/*      @media BLOQUES */
-<INITIAL>"@media"           { mediaBlocks++; }
+<INITIAL>"{"            {
+    colorsInCurrentRule = 0;
+    propertiesInCurrentRule = 0;
+    BEGIN(BLOCK);
+}
 
-/*         INICIAL */
-<INITIAL>{WS}               { }
+<INITIAL>.              { }
 
-<INITIAL>"{"                { BEGIN(BLOCK); }
+<BLOCK>{WS}             { }
 
-<INITIAL>.                  { }
+<BLOCK>"}"              {
+    if (colorsInCurrentRule > maxColorsInRule)
+        maxColorsInRule = colorsInCurrentRule;
 
-/*       BLOQUE CSS */
-<BLOCK>{WS}                 { }
+    if (propertiesInCurrentRule > maxPropertiesInRule)
+        maxPropertiesInRule = propertiesInCurrentRule;
 
-<BLOCK>"}"                  { BEGIN(INITIAL); }
+    if (insideMedia)
+        rulesInsideMedia++;
+    else
+        rulesOutsideMedia++;
 
-/* PROPIEDADES - permite espacios al inicio */
-<BLOCK>{WS}*{IDENT}{WS}*":"  { 
+    insideMedia = 0;
+    BEGIN(INITIAL);
+}
+
+<BLOCK>"/*"             { BEGIN(COMMENT); }
+
+<BLOCK>{WS}*{IDENT}{WS}*":"  {
     totalProperties++;
+    propertiesInCurrentRule++;
     BEGIN(VALUE);
 }
 
-/* catch-all - SIEMPRE EL ÚLTIMO */
-<BLOCK>.                    { }
+<BLOCK>.                { }
 
-/*     VALORES */
-<VALUE>{WS}                 { }
+<VALUE>{WS}             { }
 
-/* cadenas dobles */
-<VALUE>"\""                 { BEGIN(DQSTR); }
-<DQSTR>"\\\\"               { }
-<DQSTR>"\\\""               { }
-<DQSTR>"\""                 { BEGIN(VALUE); }
-<DQSTR>.|\n                 { }
+<VALUE>"\""             { BEGIN(DQSTR); }
+<DQSTR>"\\\\"           { }
+<DQSTR>"\\\""           { }
+<DQSTR>"\""             { BEGIN(VALUE); }
+<DQSTR>.|\n             { }
 
-/* cadenas simples */
-<VALUE>"\'"                 { BEGIN(SQSTR); }
-<SQSTR>"\\\\"               { }
-<SQSTR>"\\\'"               { }
-<SQSTR>"\'"                 { BEGIN(VALUE); }
-<SQSTR>.|\n                 { }
+<VALUE>"\'"             { BEGIN(SQSTR); }
+<SQSTR>"\\\\"           { }
+<SQSTR>"\\\'"           { }
+<SQSTR>"\'"             { BEGIN(VALUE); }
+<SQSTR>.|\n             { }
 
-/* !important */
 <VALUE>"!"{WS}*"important"  { importantCount++; }
 
-/* unidades */
 <VALUE>[0-9]+\.?[0-9]*{UNIT}  { measureCount++; }
 
-/* colores HEX */
-<VALUE>{HEX8}               { colorCount++; }
-<VALUE>{HEX6}               { colorCount++; }
-<VALUE>{HEX3}               { colorCount++; }
+<VALUE>{HEX8}           { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX6}           { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX3}           { colorCount++; colorsInCurrentRule++; }
 
-/* rgb/rgba */
-<VALUE>rgba?\([^)]*\)       { colorCount++; }
+<VALUE>rgba?\([^)]*\)   { colorCount++; colorsInCurrentRule++; }
 
-/* color por nombre */
-<VALUE>{COLORNAME}({NONWORD}|$) {
-    if (yyleng > 0) {
-        unsigned char c = (unsigned char)yytext[yyleng-1];
-        if (isalnum(c) || c == '_' || c == '-') {
-            yyless(yyleng - 1);
-        }
-    }
-    colorCount++;
-}
+<VALUE>{COLORNAME} { colorCount++; colorsInCurrentRule++; }
 
-/* fin de valor */
-<VALUE>";"                  { BEGIN(BLOCK); }
+<VALUE>";"              { BEGIN(BLOCK); }
 
-/* resto del valor */
-<VALUE>.                    { }
+<VALUE>"/*"             { BEGIN(COMMENT); }
+
+<VALUE>.                { }
 
 %%
 
 int main(int argc, char **argv) {
+
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
         if (!yyin) {
-            fprintf(stderr, "Error al abrir archivo\n");
             return 1;
         }
     }
@@ -142,9 +139,13 @@ int main(int argc, char **argv) {
 
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
+    printf("3. Máximo número de propiedades en una regla: %d\n", maxPropertiesInRule);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     printf("6. Número de especificaciones de color: %d\n", colorCount);
+    printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
+    printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
+    printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
 
     if (argc > 1) fclose(yyin);
     return 0;
