@@ -1,22 +1,19 @@
 %{
 /* PRACTICA 1 - FLEX (Segunda Convocatoria Karima Drafli Rico) */
 /* SECCION DEFINICIONES */
-/* INICIALIZAMOS LAS VARIABLES GLOBALES */
+/* INICIALIZAMOS VARIABLES GLOBALES */
 
-/* Contadores globales */
 int mediaBlocks = 0;
 int totalProperties = 0;
 int importantCount = 0;
 int measureCount = 0;
 int colorCount = 0;
 
-/* Colores y propiedades por regla */
 int colorsInCurrentRule = 0;
 int maxColorsInRule = 0;
 int propertiesInCurrentRule = 0;
 int maxPropertiesInRule = 0;
 
-/* Reglas dentro/fuera de media */
 int insideMedia = 0;
 int rulesInsideMedia = 0;
 int rulesOutsideMedia = 0;
@@ -24,16 +21,12 @@ int rulesOutsideMedia = 0;
 
 %option noyywrap
 
-/* Estados exclusivos */
-%x COMMENT_INITIAL
-%x COMMENT_BLOCK
-%x COMMENT_VALUE
+%x COMMENT
 %x BLOCK
 %x VALUE
 %x DQSTR
 %x SQSTR
 
-/* Patrones básicos */
 WS      [ \t\r\n]+
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
@@ -48,67 +41,57 @@ RGBAFN      rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 %%
 
-"/*"                { BEGIN(COMMENT_INITIAL); }
-<COMMENT_INITIAL>"*/"       { BEGIN(INITIAL); }
-<COMMENT_INITIAL>.|\n       { }
+"/*"            { BEGIN(COMMENT); }
+<COMMENT>"*/"   { BEGIN(INITIAL); }
+<COMMENT>.|\n   { }
 
-<BLOCK>"/*"          { BEGIN(COMMENT_BLOCK); }
-<COMMENT_BLOCK>"*/"       { BEGIN(BLOCK); }
-<COMMENT_BLOCK>.|\n       { }
+<INITIAL>{WS}+  { }
+<INITIAL>"@media" { mediaBlocks++; insideMedia = 1; }
+<INITIAL>"{"   { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
+<INITIAL>.      { }
 
-<VALUE>"/*"           { BEGIN(COMMENT_VALUE); }
-<COMMENT_VALUE>"*/"       { BEGIN(VALUE); }
-<COMMENT_VALUE>.|\n       { }
-
-<INITIAL>{WS}+      { }
-<INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
-<INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
-<INITIAL>.          { }
-
-<BLOCK>{WS}+        { }
-
-<BLOCK>"}"          {
-                        if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
-                        if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
-                        if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
-                        insideMedia = 0;
-                        BEGIN(INITIAL);
-                     }
-
+<BLOCK>{WS}+    { }
+<BLOCK>"/*"     { BEGIN(COMMENT); }
+<BLOCK>"}"      {
+                    if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
+                    if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
+                    if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
+                    insideMedia = 0;
+                    BEGIN(INITIAL);
+                 }
 <BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
-<BLOCK>.             { }
+<BLOCK>.        { }
 
-<VALUE>{WS}+         { }
+<VALUE>{WS}+    { }
+<VALUE>"/*"     { BEGIN(COMMENT); }
 
-<VALUE>"\""           { BEGIN(DQSTR); }
-<DQSTR>([^"\\\n]+|\\.)*  { }
-<DQSTR>"\""           { BEGIN(VALUE); }
+<VALUE>"\""     { BEGIN(DQSTR); }
+<DQSTR>([^"\\\n]+|\\.)* { }
+<DQSTR>"\""     { BEGIN(VALUE); }
 
-<VALUE>"\'"           { BEGIN(SQSTR); }
-<SQSTR>([^'\\\n]+|\\.)*  { }
-<SQSTR>"\'"           { BEGIN(VALUE); }
+<VALUE>"\'"     { BEGIN(SQSTR); }
+<SQSTR>([^'\\\n]+|\\.)* { }
+<SQSTR>"\'"     { BEGIN(VALUE); }
 
 <VALUE>"!"{WS}*"important" { importantCount++; }
 <VALUE>[0-9]+\.?[0-9]*{UNIT} { measureCount++; }
 
-<VALUE>{HEX8}        { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX6}        { colorCount++; colorsInCurrentRule++; }
-<VALUE>{HEX3}        { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX8} { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX6} { colorCount++; colorsInCurrentRule++; }
+<VALUE>{HEX3} { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>{RGBFN}       { colorCount++; colorsInCurrentRule++; }
-<VALUE>{RGBAFN}      { colorCount++; colorsInCurrentRule++; }
+<VALUE>{RGBFN} { colorCount++; colorsInCurrentRule++; }
+<VALUE>{RGBAFN} { colorCount++; colorsInCurrentRule++; }
 
-<VALUE>{COLORNAME}   { colorCount++; colorsInCurrentRule++; }
-<VALUE>";"           { BEGIN(BLOCK); }
-<VALUE>.              { }
+<VALUE>{COLORNAME} { colorCount++; colorsInCurrentRule++; }
+<VALUE>";"   { BEGIN(BLOCK); }
+<VALUE>.      { }
 
 %%
 
-/* FUNCION PRINCIPAL */
 int main(int argc, char **argv) {
     if(argc>1) yyin=fopen(argv[1],"r");
     yylex();
-
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
     printf("3. Máximo número de propiedades en una regla: %d\n", maxPropertiesInRule);
@@ -118,6 +101,5 @@ int main(int argc, char **argv) {
     printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
     printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
     printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
-
     return 0;
 }
