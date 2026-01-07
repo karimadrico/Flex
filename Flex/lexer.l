@@ -69,6 +69,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
+<INITIAL>[^\x20-\x7E]+    { /* ignorar bytes de control/no imprimibles */ }
 <INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
 
 <INITIAL>{SEL}      {
@@ -85,6 +86,7 @@ HEX8    \#[0-9A-Fa-f]{8}
         currentSelector[selectorLen++] = ' ';
     }
 }
+<SELECTOR>[^\x20-\x7E]+ { /* ignorar bytes no imprimibles en selector */ }
 
 <SELECTOR>{SEL}     {
     if (selectorLen + yyleng < sizeof(currentSelector)) {
@@ -114,6 +116,8 @@ HEX8    \#[0-9A-Fa-f]{8}
 <BLOCK>{WS}+    { }
 <BLOCK>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
 
+<BLOCK>[^\x20-\x7E]+    { /* ignorar bytes de control en bloque */ }
+
 <BLOCK>"{"         {
     colorsInCurrentRule=0; 
     propertiesInCurrentRule=0;
@@ -132,6 +136,8 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <VALUE>{WS}+    { }
 <VALUE>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
+
+<VALUE>[^\x20-\x7E]+    { /* ignorar bytes de control en value */ }
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
