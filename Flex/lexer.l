@@ -1,7 +1,6 @@
 %{
-/*
- * PRÁCTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
- */
+/* PRACTICA 1 - FLEX (Segunda Convocatoria) Karima Drafli Rico
+*/
 
 /* Contadores globales */
 int mediaBlocks = 0;
@@ -10,15 +9,11 @@ int importantCount = 0;
 int measureCount = 0;
 int colorCount = 0;
 
-/* Contadores por regla */
-int propertiesInCurrentRule = 0;
-int maxPropertiesInRule = 0;
+/* Colores y propiedades por regla */
 int colorsInCurrentRule = 0;
 int maxColorsInRule = 0;
-
-/* Selectores */
-char currentSelector[1024];
-char maxSelector[1024];
+int propertiesInCurrentRule = 0;
+int maxPropertiesInRule = 0;
 
 /* Reglas dentro/fuera de media */
 int insideMedia = 0;
@@ -45,8 +40,10 @@ HEX6            \#[0-9A-Fa-f]{6}
 HEX8            \#[0-9A-Fa-f]{8}
 
 COLORNAME       (black|gray|grey|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
-RGBFN           rgb\([0-9%,. ]*\)
-RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
+
+/* RGB y RGBA seguros para Flex */
+RGBFN           rgb\([0-9% ,\.]*\)
+RGBAFN          rgba\([0-9% ,\.]*,[0-9\.]*\)
 
 %%
 
@@ -58,27 +55,21 @@ RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
 /* ------------------ INICIAL ------------------ */
 <INITIAL>{WS}+      { }
 <INITIAL>"@media"   { mediaBlocks++; insideMedia = 1; }
-<INITIAL>"{"       { propertiesInCurrentRule = 0; colorsInCurrentRule = 0; BEGIN(BLOCK); }
-<INITIAL>[^{}]+     { 
-                        int len = yyleng < sizeof(currentSelector)-1 ? yyleng : sizeof(currentSelector)-1;
-                        strncpy(currentSelector, yytext, len);
-                        currentSelector[len] = '\0';
-                     }
+<INITIAL>"{"       { colorsInCurrentRule=0; propertiesInCurrentRule=0; BEGIN(BLOCK); }
+<INITIAL>.          { }
 
 /* ------------------ BLOQUE ------------------ */
 <BLOCK>{WS}+        { }
 <BLOCK>"/*"          { BEGIN(COMMENT); }
-<BLOCK>"}"          { 
-                        if(propertiesInCurrentRule > maxPropertiesInRule) {
-                            maxPropertiesInRule = propertiesInCurrentRule;
-                            strncpy(maxSelector, currentSelector, sizeof(maxSelector)-1);
-                            maxSelector[sizeof(maxSelector)-1] = '\0';
-                        }
+
+<BLOCK>"}"          {
                         if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
+                        if(propertiesInCurrentRule > maxPropertiesInRule) maxPropertiesInRule = propertiesInCurrentRule;
                         if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
                         insideMedia = 0;
                         BEGIN(INITIAL);
                      }
+
 /* Propiedad: nombre: */
 <BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
 <BLOCK>.             { }
@@ -87,13 +78,13 @@ RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
 <VALUE>{WS}+         { }
 <VALUE>"/*"           { BEGIN(COMMENT); }
 
-/* Cadenas dobles y simples */
+/* Cadenas */
 <VALUE>"\""           { BEGIN(DQSTR); }
-<DQSTR>[^"]+          { }
+<DQSTR>([^"\\\n]+|\\.)*  { }
 <DQSTR>"\""           { BEGIN(VALUE); }
 
 <VALUE>"\'"           { BEGIN(SQSTR); }
-<SQSTR>[^']+          { }
+<SQSTR>([^'\\\n]+|\\.)*  { }
 <SQSTR>"\'"           { BEGIN(VALUE); }
 
 /* Propiedades !important */
@@ -121,16 +112,17 @@ RGBAFN          rgba\([0-9%,. ]*(,[0-9.]+)?\)
 
 %%
 
-/* ------------------ IMPRESIÓN DE RESULTADOS ------------------ */
-int yywrap(void) { 
+int main(int argc, char **argv) {
+    if(argc>1) yyin=fopen(argv[1],"r");
+    yylex();
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
-    printf("3. Selector con máximo número de propiedades: %s (%d)\n", maxSelector, maxPropertiesInRule);
+    printf("3. Máximo número de propiedades en una regla: %d\n", maxPropertiesInRule);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     printf("6. Número de especificaciones de color: %d\n", colorCount);
     printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
     printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
     printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
-    return 1;
+    return 0;
 }
