@@ -19,7 +19,7 @@ int maxColorsInRule = 0;
 int propertiesInCurrentRule = 0;
 int maxPropertiesInRule = 0;
 
-/* Selector con más propiedades (guardado cuando se necesite con strdup) */
+/* Selector con más propiedades */
 char *maxSelectorStr = NULL;
 char *currentSelector = NULL;
 
@@ -44,7 +44,7 @@ int rulesOutsideMedia = 0;
 %x DQSTR
 %x SQSTR
 
-/* Patrones básicos - AQUÍ ANTES DEL %% */
+/* Patrones básicos */
 WS      [ \t\r\n]+
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
@@ -71,7 +71,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 <MEDIA_HDR>.|\n      { }
 
 /* Selector: se reconoce justo antes de '{' (los espacios antes de '{' no se consumen) */
-<INITIAL>{SEL}+({WS}+{SEL}+)* / {WS}*"{" {
+<INITIAL>{SEL}+({WS}+{SEL}+)*/{WS}*\{ {
                     if (currentSelector) { free(currentSelector); currentSelector = NULL; }
                     currentSelector = strdup(yytext);
                     colorsInCurrentRule = 0;
@@ -100,7 +100,6 @@ HEX8    \#[0-9A-Fa-f]{8}
 <INITIAL>.          { }
 
 <BLOCK>{WS}+    { }
-<BLOCK>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
 <BLOCK>"}"      {
                     if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
                     if(propertiesInCurrentRule > maxPropertiesInRule) {
@@ -121,8 +120,6 @@ HEX8    \#[0-9A-Fa-f]{8}
 <BLOCK>.        { }
 
 <VALUE>{WS}+    { }
-<VALUE>"/*"     { prevState = YY_START; BEGIN(COMMENT); }
-
 
 <VALUE>"\""     { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
