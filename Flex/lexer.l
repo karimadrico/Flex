@@ -95,6 +95,8 @@ HEX8    \#[0-9A-Fa-f]{8}
     }
 }
 
+<SELECTOR>.        { /* consumir cualquier carácter suelto en SELECTOR */ }
+
 <SELECTOR>"{"       {
     currentSelector[selectorLen] = '\0';
     colorsInCurrentRule = 0;
