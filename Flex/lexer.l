@@ -86,6 +86,8 @@ HEX8    \#[0-9A-Fa-f]{8}
                     BEGIN(BLOCK);
                 }
 
+<SELECTOR>{WS}+/"{" { }
+
 <SELECTOR>{WS}+     { yymore(); }
 <SELECTOR>{SEL}     { yymore(); }
 <SELECTOR>"\""    { yymore(); BEGIN(SELECTOR_DQ); }
