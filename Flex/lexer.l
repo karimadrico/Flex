@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
     yylex();
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
-    if (maxSelectorStr) printf("3. Selector con más propiedades: %s (%d)\n", maxSelectorStr, maxPropertiesInRule);
+    if (maxSelectorStr) printf("3. Selector con más propiedades: %s(%d)\n", maxSelectorStr, maxPropertiesInRule);
     else printf("3. Máximo número de propiedades en una regla: %d\n", maxPropertiesInRule);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
