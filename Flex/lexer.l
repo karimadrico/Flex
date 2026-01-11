@@ -144,16 +144,15 @@ HEX8    \#[0-9A-Fa-f]{8}
 <SQSTR>"\'"     { BEGIN(VALUE); }
 
 <VALUE>"!"{WS}*"important" { importantCount++; }
-<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT}([^[A-Za-z0-9_-]]|$) {
-    /* Solo cuenta si la unidad está seguida de un delimitador válido (no letra, guion bajo ni guion) */
-    int len = yyleng;
-    unsigned char c = (unsigned char)yytext[len-1];
-    if (isalpha(c) || c == '_' || c == '-') {
-        /* No es un delimitador válido, no contar */
-        /* Retroceder el analizador para que vuelva a analizar desde aquí */
-        yyless(len-1);
+<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT} {
+    /* Comprobar el siguiente carácter tras la unidad */
+    int next = input();
+    if (isalpha(next) || isdigit(next) || next == '_' || next == '-') {
+        /* No es delimitador válido, no contar */
+        unput(next);
     } else {
         measureCount++;
+        if (next != EOF) unput(next);
     }
 }
 
