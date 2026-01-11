@@ -1,3 +1,6 @@
+%{
+/* PRACTICA 1 - FLEX (Segunda Convocatoria Karima Drafli Rico) */
+
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -14,13 +17,6 @@ void print_stats() {
     printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
     printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
 }
-%{
-/* PRACTICA 1 - FLEX (Segunda Convocatoria Karima Drafli Rico) */
-
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
-#include <stdlib.h>
 
 /* Contadores globales */
 int mediaBlocks = 0;
