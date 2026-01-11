@@ -6,17 +6,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-void print_stats() {
-    printf("1. Número de bloques @media: %d\n", mediaBlocks);
-    printf("2. Número total de propiedades: %d\n", totalProperties);
-    printf("3. Selector con más propiedades: %s (%d)\n", maxSelectorStr ? maxSelectorStr : "", maxPropertiesInRule);
-    printf("4. Número de propiedades !important: %d\n", importantCount);
-    printf("5. Número de valores con unidades de medida: %d\n", measureCount);
-    printf("6. Número de especificaciones de color: %d\n", colorCount);
-    printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
-    printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
-    printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
-}
 
 /* Contadores globales */
 int mediaBlocks = 0;
@@ -43,6 +32,18 @@ int insideMedia = 0;
 int mediaDepth = 0;
 int rulesInsideMedia = 0;
 int rulesOutsideMedia = 0;
+
+void print_stats() {
+    printf("1. Número de bloques @media: %d\n", mediaBlocks);
+    printf("2. Número total de propiedades: %d\n", totalProperties);
+    printf("3. Selector con más propiedades: %s (%d)\n", maxSelectorStr ? maxSelectorStr : "", maxPropertiesInRule);
+    printf("4. Número de propiedades !important: %d\n", importantCount);
+    printf("5. Número de valores con unidades de medida: %d\n", measureCount);
+    printf("6. Número de especificaciones de color: %d\n", colorCount);
+    printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
+    printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
+    printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
+}
 %}
 
 %option noyywrap
