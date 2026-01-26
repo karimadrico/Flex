@@ -104,6 +104,8 @@ HEX8    \#[0-9A-Fa-f]{8}
 <SELECTOR_SQ>"'"               { yymore(); BEGIN(SELECTOR); }
 
 <INITIAL>"{"        {
+    if (currentSelector) free(currentSelector);
+    currentSelector = NULL;
     colorsInCurrentRule = 0;
     propertiesInCurrentRule = 0;
     BEGIN(BLOCK);
@@ -151,22 +153,26 @@ HEX8    \#[0-9A-Fa-f]{8}
     measureCount++;
 }
 
-<VALUE>({HEX8}|{HEX6}|{HEX3}) {
+<VALUE>({HEX8}|{HEX6}|{HEX3})[ \t\r\n;,\)!] {
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-<VALUE>rgb\({WS}*([0-9]+{WS}*,|[0-9]+%{WS}*,)[0-9%,.\s]+{WS}*\) {
+<VALUE>rgb\({WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*\)[ \t\r\n;,\)!] {
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-<VALUE>rgba\({WS}*([0-9]+{WS}*,|[0-9]+%{WS}*,)[0-9%,.\s]+{WS}*\) {
+<VALUE>rgba\({WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+(\.[0-9]+)?|\.[0-9]+){WS}*\)[ \t\r\n;,\)!] {
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-<VALUE>({COLORNAME})(?=[ \t\r\n;,\)!]) {
+<VALUE>({COLORNAME})[ \t\r\n;,\)!] {
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
