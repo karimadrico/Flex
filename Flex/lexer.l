@@ -166,8 +166,7 @@ HEX8    \#[0-9A-Fa-f]{8}
     colorsInCurrentRule++;
 }
 
-<VALUE>({COLORNAME})({NONWORD}|;|$) {
-    yyless(yyleng-1);
+<VALUE>({COLORNAME})(?=[ \t\r\n;,\)!]) {
     colorCount++;
     colorsInCurrentRule++;
 }
