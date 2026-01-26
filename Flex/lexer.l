@@ -59,248 +59,180 @@ void print_stats() {
 }
 %}
 
-%option noyywrap  /* No requiere función yywrap() para múltiples archivos */
+%option noyywrap
 
-/* ------------------------- ESTADOS EXCLUSIVOS ------------------------- */
-/* Estados para manejar diferentes contextos del análisis léxico */
-%x COMMENT      /* Estado para ignorar comentarios /* ... */ */
-%x MEDIA_HDR    /* Estado para procesar la cabecera de @media */
-%x SELECTOR     /* Estado para acumular el selector completo */
-%x SELECTOR_DQ  /* Estado dentro de comillas dobles en selector */
-%x SELECTOR_SQ  /* Estado dentro de comillas simples en selector */
-%x BLOCK        /* Estado dentro de un bloque de propiedades { ... } */
-%x VALUE        /* Estado procesando el valor de una propiedad */
-%x DQSTR        /* Estado dentro de cadena entre comillas dobles en valor */
-%x SQSTR        /* Estado dentro de cadena entre comillas simples en valor */
+%x COMMENT
+%x MEDIA_HDR
+%x SELECTOR
+%x SELECTOR_DQ
+%x SELECTOR_SQ
+%x BLOCK
+%x VALUE
+%x DQSTR
+%x SQSTR
 
-/* ------------------------- DEFINICIONES DE PATRONES ------------------------- */
-/* Espacios en blanco: espacios, tabs, retornos de carro, saltos de línea */
 WS      [ \t\r\n]+
-
-/* Unidades de medida CSS permitidas según el enunciado */
 UNIT    (pt|mm|cm|pc|in|px|em|ex)
-
-/* Identificador: empieza con letra/guion, seguido de letras/números/guiones */
 IDENT   [a-zA-Z_-][a-zA-Z0-9_-]*
-
-/* Selector: caracteres permitidos en selectores CSS: clases, IDs, atributos, etc. */
 SEL     [a-zA-Z0-9_.#:\[\]()=*,>+~\-\^\$\|\\,]+
-
-/* Patrones auxiliares (no usados directamente pero útiles) */
 NONWORD [^A-Za-z0-9_-]
 NONHEX  [^0-9A-Fa-f]
-
-/* Nombres de color permitidos */
 COLORNAME (black|gray|silver|white|maroon|red|purple|fuchsia|green|lime|olive|yellow|navy|blue|teal|aqua|orange)
-
-/* Colores hexadecimales: 3, 6 u 8 dígitos hexadecimales */
-HEX3    \#[0-9A-Fa-f]{3}   /* Formato corto: #F0A */
-HEX6    \#[0-9A-Fa-f]{6}   /* Formato estándar: #F0AA9B */
-HEX8    \#[0-9A-Fa-f]{8}   /* Formato con alpha: #0000ffcc */
+HEX3    \#[0-9A-Fa-f]{3}
+HEX6    \#[0-9A-Fa-f]{6}
+HEX8    \#[0-9A-Fa-f]{8}
 
 %%
 
-/* ------------------------- REGLAS PARA COMENTARIOS ------------------------- */
-/* Los comentarios /* ... */ se ignoran en todos los estados */
-/* Guardamos el estado anterior para volver después del comentario */
 <INITIAL,MEDIA_HDR,SELECTOR,BLOCK,VALUE>"/*"  { 
-    prevState = YY_START;  /* Guardar estado actual */
-    BEGIN(COMMENT);        /* Cambiar a estado de comentario */
+    prevState = YY_START;
+    BEGIN(COMMENT);
 }
-<COMMENT>"*/"       { BEGIN(prevState); }  /* Volver al estado anterior */
-<COMMENT>.|\n       { }  /* Ignorar todo dentro del comentario */
+<COMMENT>"*/"       { BEGIN(prevState); }
+<COMMENT>.|\n       { }
 
-/* ------------------------- REGLAS EN ESTADO INITIAL ------------------------- */
-/* Estado inicial: buscando selectores o bloques @media */
-<INITIAL>{WS}+      { }  /* Ignorar espacios en blanco */
-
-/* Detectar inicio de bloque @media */
+<INITIAL>{WS}+      { }
 <INITIAL>"@media"   { 
-    mediaBlocks++;        /* Incrementar contador de bloques @media */
-    BEGIN(MEDIA_HDR);     /* Cambiar a estado de cabecera @media */
+    mediaBlocks++;
+    BEGIN(MEDIA_HDR);
 }
 
-/* ------------------------- REGLAS EN ESTADO MEDIA_HDR ------------------------- */
-/* Procesando la cabecera de @media hasta encontrar el { */
 <MEDIA_HDR>"{"      { 
-    insideMedia = 1;      /* Marcar que estamos dentro de @media */
-    mediaDepth = 1;       /* Inicializar profundidad de anidamiento */
-    BEGIN(INITIAL);        /* Volver a INITIAL para buscar selectores */
+    insideMedia = 1;
+    mediaDepth = 1;
+    BEGIN(INITIAL);
 }
-<MEDIA_HDR>.|\n     { }  /* Ignorar todo en la cabecera hasta el { */
+<MEDIA_HDR>.|\n     { }
 
-/* ------------------------- DETECCIÓN DE SELECTORES ------------------------- */
-/* Cuando encontramos caracteres de selector, empezamos a acumularlo */
 <INITIAL>{SEL}      { 
-    yymore();        /* Acumular más texto para el selector completo */
-    BEGIN(SELECTOR); /* Cambiar a estado SELECTOR */
+    yymore();
+    BEGIN(SELECTOR);
 }
 
-/* ------------------------- REGLAS EN ESTADO SELECTOR ------------------------- */
-/* Acumulando el selector completo hasta encontrar el { */
 <SELECTOR>"{"       {
-    /* Retroceder un carácter para que el { sea procesado por otra regla */
     yyless(yyleng-1);
-    /* Guardar el selector completo de la regla actual */
     if (currentSelector) free(currentSelector);
     currentSelector = strdup(yytext);
-    /* Reiniciar contadores para esta nueva regla */
     colorsInCurrentRule = 0;
     propertiesInCurrentRule = 0;
-    /* Si estamos dentro de @media, incrementar profundidad */
     if (insideMedia) mediaDepth++;
-    BEGIN(BLOCK);  /* Cambiar a estado BLOCK para procesar propiedades */
+    BEGIN(BLOCK);
 }
 
-/* Continuar acumulando el selector: espacios, más caracteres, comillas */
-<SELECTOR>{WS}+     { yymore(); }  /* Espacios dentro del selector */
-<SELECTOR>{SEL}     { yymore(); }  /* Más caracteres del selector */
+<SELECTOR>{WS}+     { yymore(); }
+<SELECTOR>{SEL}     { yymore(); }
 <SELECTOR>"\""      { 
     yymore(); 
-    BEGIN(SELECTOR_DQ);  /* Entrar en cadena entre comillas dobles */
+    BEGIN(SELECTOR_DQ);
 }
 <SELECTOR>"'"       { 
     yymore(); 
-    BEGIN(SELECTOR_SQ);  /* Entrar en cadena entre comillas simples */
+    BEGIN(SELECTOR_SQ);
 }
-<SELECTOR>.         { yymore(); }  /* Cualquier otro carácter del selector */
+<SELECTOR>.         { yymore(); }
 
-/* ------------------------- REGLAS PARA CADENAS EN SELECTORES ------------------------- */
-/* Manejo de cadenas entre comillas dentro de selectores (atributos CSS) */
-<SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }  /* Contenido de la cadena */
+<SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
 <SELECTOR_DQ>"\""             { 
     yymore(); 
-    BEGIN(SELECTOR);  /* Volver a SELECTOR al cerrar comillas */
+    BEGIN(SELECTOR);
 }
 
-<SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }  /* Contenido de la cadena */
+<SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
 <SELECTOR_SQ>"'"               { 
     yymore(); 
-    BEGIN(SELECTOR);  /* Volver a SELECTOR al cerrar comillas */
+    BEGIN(SELECTOR);
 }
 
-/* ------------------------- BLOQUES SIN SELECTOR ------------------------- */
-/* Bloque que aparece sin selector previo (puede ocurrir en algunos casos) */
 <INITIAL>"{"        {
     if (currentSelector) free(currentSelector);
-    currentSelector = NULL;  /* No hay selector para este bloque */
+    currentSelector = NULL;
     colorsInCurrentRule = 0;
     propertiesInCurrentRule = 0;
     BEGIN(BLOCK);
 }
 
-/* Cierre de bloque en INITIAL (puede cerrar bloques @media) */
 <INITIAL>"}"        {
     if (insideMedia) {
         mediaDepth--;
         if (mediaDepth <= 0) { 
-            insideMedia = 0;   /* Salimos completamente de @media */
+            insideMedia = 0;
             mediaDepth = 0; 
         }
     }
 }
-<INITIAL>.          { }  /* Ignorar cualquier otro carácter en INITIAL */
+<INITIAL>.          { }
 
-/* ------------------------- REGLAS EN ESTADO BLOCK ------------------------- */
-/* Dentro de un bloque de propiedades { propiedad: valor; } */
-<BLOCK>{WS}+        { }  /* Ignorar espacios en blanco */
-
-/* Cierre del bloque de propiedades */
+<BLOCK>{WS}+        { }
 <BLOCK>"}"          {
-    /* Actualizar máximo de colores si la regla actual tiene más */
     if (colorsInCurrentRule > maxColorsInRule) 
         maxColorsInRule = colorsInCurrentRule;
-    
-    /* Actualizar selector con más propiedades si corresponde */
     if (propertiesInCurrentRule > maxPropertiesInRule) {
         maxPropertiesInRule = propertiesInCurrentRule;
         if (maxSelectorStr) free(maxSelectorStr);
         maxSelectorStr = currentSelector ? strdup(currentSelector) : NULL;
     }
-    
-    /* Manejar cierre de bloques @media anidados */
     if (insideMedia) {
         mediaDepth--;
         if (mediaDepth <= 0) { 
-            insideMedia = 0;   /* Salimos completamente de @media */
+            insideMedia = 0;
             mediaDepth = 0; 
         }
     }
-    BEGIN(INITIAL);  /* Volver a INITIAL para buscar siguiente regla */
+    BEGIN(INITIAL);
 }
 
-/* Detectar inicio de una propiedad: identificador seguido de : */
 <BLOCK>{IDENT}{WS}*":" { 
-    totalProperties++;           /* Incrementar contador global */
-    propertiesInCurrentRule++;   /* Incrementar contador de la regla actual */
-    BEGIN(VALUE);                /* Cambiar a estado VALUE para procesar el valor */
+    totalProperties++;
+    propertiesInCurrentRule++;
+    BEGIN(VALUE);
 }
-<BLOCK>.            { }  /* Ignorar otros caracteres en el bloque */
+<BLOCK>.            { }
 
-/* ------------------------- REGLAS EN ESTADO VALUE ------------------------- */
-/* Procesando el valor de una propiedad CSS */
-<VALUE>{WS}+        { }  /* Ignorar espacios en blanco en valores */
+<VALUE>{WS}+        { }
 
-/* ------------------------- MANEJO DE CADENAS EN VALORES ------------------------- */
-/* Las cadenas entre comillas en valores se ignoran según el enunciado */
-<VALUE>"\""         { BEGIN(DQSTR); }  /* Inicio de cadena con comillas dobles */
-<DQSTR>([^"\\\n]+|\\.)* { }  /* Contenido de la cadena (ignorado) */
-<DQSTR>"\""         { BEGIN(VALUE); }  /* Fin de cadena, volver a VALUE */
+<VALUE>"\""         { BEGIN(DQSTR); }
+<DQSTR>([^"\\\n]+|\\.)* { }
+<DQSTR>"\""         { BEGIN(VALUE); }
 
-<VALUE>"'"          { BEGIN(SQSTR); }  /* Inicio de cadena con comillas simples */
-<SQSTR>([^'\\\n]+|\\.)* { }  /* Contenido de la cadena (ignorado) */
-<SQSTR>"'"          { BEGIN(VALUE); }  /* Fin de cadena, volver a VALUE */
+<VALUE>"'"          { BEGIN(SQSTR); }
+<SQSTR>([^'\\\n]+|\\.)* { }
+<SQSTR>"'"          { BEGIN(VALUE); }
 
-/* ------------------------- DETECCIÓN DE !important ------------------------- */
-/* Detecta !important incluso con espacios entre ! y important */
 <VALUE>"!"({WS}*)"important" { 
-    importantCount++;  /* Incrementar contador de propiedades !important */
+    importantCount++;
 }
 
-/* ------------------------- DETECCIÓN DE UNIDADES DE MEDIDA ------------------------- */
-/* Número (entero o decimal) seguido de unidad de medida y delimitador */
 <VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT}[ \t\r\n;,\)!] {
-    yyless(yyleng-1);  /* Retroceder delimitador para procesarlo después */
-    measureCount++;     /* Incrementar contador de medidas */
+    yyless(yyleng-1);
+    measureCount++;
 }
 
-/* ------------------------- DETECCIÓN DE COLORES HEX ------------------------- */
-/* Colores hexadecimales: #RGB, #RRGGBB o #RRGGBBAA */
 <VALUE>({HEX8}|{HEX6}|{HEX3})[ \t\r\n;,\)!] {
-    yyless(yyleng-1);  /* Retroceder delimitador */
-    colorCount++;       /* Incrementar contador global de colores */
-    colorsInCurrentRule++;  /* Incrementar contador de colores en regla actual */
+    yyless(yyleng-1);
+    colorCount++;
+    colorsInCurrentRule++;
 }
 
-/* ------------------------- DETECCIÓN DE COLORES RGB ------------------------- */
-/* Formato: rgb(num, num, num) o rgb(num%, num%, num%) */
-/* Permite espacios flexibles alrededor de comas y valores */
 <VALUE>rgb\({WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*\)[ \t\r\n;,\)!] {
-    yyless(yyleng-1);  /* Retroceder delimitador */
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-/* ------------------------- DETECCIÓN DE COLORES RGBA ------------------------- */
-/* Formato: rgba(num, num, num, alpha) o rgba(num%, num%, num%, alpha) */
-/* El componente alpha puede ser decimal (0.5) o empezar con punto (.9) */
 <VALUE>rgba\({WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+|[0-9]+%){WS}*,{WS}*([0-9]+(\.[0-9]+)?|\.[0-9]+){WS}*\)[ \t\r\n;,\)!] {
-    yyless(yyleng-1);  /* Retroceder delimitador */
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-/* ------------------------- DETECCIÓN DE NOMBRES DE COLOR ------------------------- */
-/* Nombres de color predefinidos según el enunciado */
 <VALUE>({COLORNAME})[ \t\r\n;,\)!] {
-    yyless(yyleng-1);  /* Retroceder delimitador */
+    yyless(yyleng-1);
     colorCount++;
     colorsInCurrentRule++;
 }
 
-/* ------------------------- FIN DE VALOR ------------------------- */
-<VALUE>";"          { BEGIN(BLOCK); }  /* Punto y coma termina el valor, volver a BLOCK */
-<VALUE>.            { }  /* Ignorar otros caracteres en el valor */
+<VALUE>";"          { BEGIN(BLOCK); }
+<VALUE>.            { }
 
 %%
 
