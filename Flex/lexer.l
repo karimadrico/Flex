@@ -12,8 +12,6 @@
 
 #include <stdio.h>
 #include <ctype.h>
-#include <string.h>
-#include <stdlib.h>
 
 /* ------------------------- CONTADORES GLOBALES ------------------------- */
 /* Estadísticas acumuladas durante todo el procesamiento */
@@ -31,9 +29,10 @@ int propertiesInCurrentRule = 0;  /* Propiedades en la regla actual */
 int maxPropertiesInRule = 0;       /* Máximo de propiedades en una regla */
 
 /* ------------------------- GESTIÓN DE SELECTORES ------------------------- */
-/* Almacena el selector completo para identificar la regla con más propiedades */
-char *maxSelectorStr = NULL;   /* Selector de la regla con más propiedades */
-char *currentSelector = NULL;  /* Selector de la regla que se está procesando */
+/* Almacena el selector completo usando buffers estáticos (sin memoria dinámica) */
+#define MAX_SELECTOR_LEN 2048
+char currentSelector[MAX_SELECTOR_LEN] = "";  /* Selector de la regla actual */
+char maxSelectorStr[MAX_SELECTOR_LEN] = "";    /* Selector de la regla con más propiedades */
 
 /* ------------------------- GESTIÓN DE COMENTARIOS ------------------------- */
 /* Guarda el estado anterior al entrar en un comentario para poder volver */
@@ -48,10 +47,20 @@ int mediaDepth = 0;     /* Profundidad de anidamiento de bloques @media */
  * Función que imprime todas las estadísticas calculadas
  * Se llama al finalizar el procesamiento del archivo
  */
+/* Función auxiliar para copiar selector sin usar funciones de string que no podemos usar */
+void copy_selector(char *dest, const char *src) {
+    int i = 0;
+    while (src[i] != '\0' && i < MAX_SELECTOR_LEN - 1) {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
 void print_stats() {
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
     printf("2. Número total de propiedades: %d\n", totalProperties);
-    printf("3. Selector con más propiedades: %s (%d)\n", maxSelectorStr ? maxSelectorStr : "", maxPropertiesInRule);
+    printf("3. Selector con más propiedades: %s (%d)\n", maxSelectorStr[0] ? maxSelectorStr : "", maxPropertiesInRule);
     printf("4. Número de propiedades !important: %d\n", importantCount);
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     printf("6. Número de especificaciones de color: %d\n", colorCount);
@@ -111,8 +120,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <SELECTOR>"{"       {
     yyless(yyleng-1);
-    if (currentSelector) free(currentSelector);
-    currentSelector = strdup(yytext);
+    copy_selector(currentSelector, yytext);
     colorsInCurrentRule = 0;
     propertiesInCurrentRule = 0;
     if (insideMedia) mediaDepth++;
@@ -144,8 +152,7 @@ HEX8    \#[0-9A-Fa-f]{8}
 }
 
 <INITIAL>"{"        {
-    if (currentSelector) free(currentSelector);
-    currentSelector = NULL;
+    currentSelector[0] = '\0';
     colorsInCurrentRule = 0;
     propertiesInCurrentRule = 0;
     BEGIN(BLOCK);
@@ -168,8 +175,7 @@ HEX8    \#[0-9A-Fa-f]{8}
         maxColorsInRule = colorsInCurrentRule;
     if (propertiesInCurrentRule > maxPropertiesInRule) {
         maxPropertiesInRule = propertiesInCurrentRule;
-        if (maxSelectorStr) free(maxSelectorStr);
-        maxSelectorStr = currentSelector ? strdup(currentSelector) : NULL;
+        copy_selector(maxSelectorStr, currentSelector);
     }
     if (insideMedia) {
         mediaDepth--;
@@ -258,10 +264,6 @@ int main(int argc, char **argv) {
     
     /* Mostrar todas las estadísticas calculadas */
     print_stats();
-    
-    /* Liberar memoria asignada dinámicamente */
-    if (currentSelector) free(currentSelector);
-    if (maxSelectorStr) free(maxSelectorStr);
     
     /* Cerrar archivo si se abrió uno */
     if (argc > 1 && yyin) fclose(yyin);
