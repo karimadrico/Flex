@@ -146,14 +146,9 @@ HEX8    \#[0-9A-Fa-f]{8}
 
 <VALUE>"!"({WS}*)"important" { importantCount++; }
 
-<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT} {
-    int next = input();
-    if (isalpha(next) || isdigit(next) || next == '_' || next == '-') {
-        unput(next);
-    } else {
-        measureCount++;
-        if (next != EOF) unput(next);
-    }
+<VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT}[ \t\r\n;,\)!] {
+    yyless(yyleng-1);
+    measureCount++;
 }
 
 <VALUE>({HEX8}|{HEX6}|{HEX3}) {
@@ -161,7 +156,12 @@ HEX8    \#[0-9A-Fa-f]{8}
     colorsInCurrentRule++;
 }
 
-<VALUE>rgba?\({WS}*[0-9%,.\s]+{WS}*\) {
+<VALUE>rgb\({WS}*([0-9]+{WS}*,|[0-9]+%{WS}*,)[0-9%,.\s]+{WS}*\) {
+    colorCount++;
+    colorsInCurrentRule++;
+}
+
+<VALUE>rgba\({WS}*([0-9]+{WS}*,|[0-9]+%{WS}*,)[0-9%,.\s]+{WS}*\) {
     colorCount++;
     colorsInCurrentRule++;
 }
