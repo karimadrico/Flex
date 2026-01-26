@@ -6,7 +6,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 /* Contadores globales */
 int mediaBlocks = 0;
 int totalProperties = 0;
@@ -30,8 +29,6 @@ int prevState = 0;
 /* Reglas dentro/fuera de media */
 int insideMedia = 0;
 int mediaDepth = 0;
-int rulesInsideMedia = 0;
-int rulesOutsideMedia = 0;
 
 void print_stats() {
     printf("1. Número de bloques @media: %d\n", mediaBlocks);
@@ -41,8 +38,6 @@ void print_stats() {
     printf("5. Número de valores con unidades de medida: %d\n", measureCount);
     printf("6. Número de especificaciones de color: %d\n", colorCount);
     printf("7. Máximo número de colores en una regla: %d\n", maxColorsInRule);
-    printf("8. Reglas dentro de @media: %d\n", rulesInsideMedia);
-    printf("9. Reglas fuera de @media: %d\n", rulesOutsideMedia);
 }
 %}
 
@@ -76,33 +71,30 @@ HEX8    \#[0-9A-Fa-f]{8}
 %%
 
 <INITIAL,MEDIA_HDR,SELECTOR,BLOCK,VALUE>"/*"  { prevState = YY_START; BEGIN(COMMENT); }
-<COMMENT>"*/"       { 
-                                                BEGIN(prevState);
-                                            }
+<COMMENT>"*/"       { BEGIN(prevState); }
 <COMMENT>.|\n       { }
 
 <INITIAL>{WS}+      { }
 <INITIAL>"@media"   { mediaBlocks++; BEGIN(MEDIA_HDR); }
 <MEDIA_HDR>"{"      { insideMedia = 1; mediaDepth = 1; BEGIN(INITIAL); }
-<MEDIA_HDR>.|\n      { }
+<MEDIA_HDR>.|\n     { }
 
 <INITIAL>{SEL}      { yymore(); BEGIN(SELECTOR); }
 
-<SELECTOR>"{"     {
-                    /* quitar '{' del lexema actual */
-                    yyless(yyleng-1);
-                    if (currentSelector) { free(currentSelector); currentSelector = NULL; }
-                    currentSelector = strdup(yytext);
-                    colorsInCurrentRule = 0;
-                    propertiesInCurrentRule = 0;
-                    if (insideMedia) mediaDepth++;
-                    BEGIN(BLOCK);
-                }
+<SELECTOR>"{"       {
+    yyless(yyleng-1);
+    if (currentSelector) free(currentSelector);
+    currentSelector = strdup(yytext);
+    colorsInCurrentRule = 0;
+    propertiesInCurrentRule = 0;
+    if (insideMedia) mediaDepth++;
+    BEGIN(BLOCK);
+}
 
 <SELECTOR>{WS}+     { yymore(); }
 <SELECTOR>{SEL}     { yymore(); }
-<SELECTOR>"\""    { yymore(); BEGIN(SELECTOR_DQ); }
-<SELECTOR>"'"      { yymore(); BEGIN(SELECTOR_SQ); }
+<SELECTOR>"\""      { yymore(); BEGIN(SELECTOR_DQ); }
+<SELECTOR>"'"       { yymore(); BEGIN(SELECTOR_SQ); }
 <SELECTOR>.         { yymore(); }
 
 <SELECTOR_DQ>([^"\\\n]+|\\.)* { yymore(); }
@@ -111,13 +103,12 @@ HEX8    \#[0-9A-Fa-f]{8}
 <SELECTOR_SQ>([^'\\\n]+|\\.)* { yymore(); }
 <SELECTOR_SQ>"'"               { yymore(); BEGIN(SELECTOR); }
 
-<INITIAL>"{"       { 
-    /* inicio de bloque: selector ya gestionado por yymore/yyless */
-    colorsInCurrentRule=0; 
-    propertiesInCurrentRule=0; 
-    BEGIN(BLOCK); 
+<INITIAL>"{"        {
+    colorsInCurrentRule = 0;
+    propertiesInCurrentRule = 0;
+    BEGIN(BLOCK);
 }
-<INITIAL>"}"       {
+<INITIAL>"}"        {
     if (insideMedia) {
         mediaDepth--;
         if (mediaDepth <= 0) { insideMedia = 0; mediaDepth = 0; }
@@ -125,43 +116,39 @@ HEX8    \#[0-9A-Fa-f]{8}
 }
 <INITIAL>.          { }
 
-<BLOCK>{WS}+    { }
-<BLOCK>"}"      {
-                    if(colorsInCurrentRule > maxColorsInRule) maxColorsInRule = colorsInCurrentRule;
-                    if(propertiesInCurrentRule > maxPropertiesInRule) {
-                        maxPropertiesInRule = propertiesInCurrentRule;
-                        if (maxSelectorStr) { free(maxSelectorStr); maxSelectorStr = NULL; }
-                        if (currentSelector) maxSelectorStr = strdup(currentSelector);
-                    }
-                    if(propertiesInCurrentRule > 0) {
-                        if(insideMedia) rulesInsideMedia++; else rulesOutsideMedia++;
-                    }
-                    if (insideMedia) {
-                        mediaDepth--;
-                        if (mediaDepth <= 0) { insideMedia = 0; mediaDepth = 0; }
-                    }
-                    BEGIN(INITIAL);
-                 }
+<BLOCK>{WS}+        { }
+<BLOCK>"}"          {
+    if (colorsInCurrentRule > maxColorsInRule) 
+        maxColorsInRule = colorsInCurrentRule;
+    if (propertiesInCurrentRule > maxPropertiesInRule) {
+        maxPropertiesInRule = propertiesInCurrentRule;
+        if (maxSelectorStr) free(maxSelectorStr);
+        maxSelectorStr = currentSelector ? strdup(currentSelector) : NULL;
+    }
+    if (insideMedia) {
+        mediaDepth--;
+        if (mediaDepth <= 0) { insideMedia = 0; mediaDepth = 0; }
+    }
+    BEGIN(INITIAL);
+}
 <BLOCK>{IDENT}{WS}*":" { totalProperties++; propertiesInCurrentRule++; BEGIN(VALUE); }
-<BLOCK>.        { }
+<BLOCK>.            { }
 
-<VALUE>{WS}+    { }
+<VALUE>{WS}+        { }
 
-
-<VALUE>"\""     { BEGIN(DQSTR); }
+<VALUE>"\""         { BEGIN(DQSTR); }
 <DQSTR>([^"\\\n]+|\\.)* { }
-<DQSTR>"\""     { BEGIN(VALUE); }
+<DQSTR>"\""         { BEGIN(VALUE); }
 
-<VALUE>"\'"     { BEGIN(SQSTR); }
+<VALUE>"'"          { BEGIN(SQSTR); }
 <SQSTR>([^'\\\n]+|\\.)* { }
-<SQSTR>"\'"     { BEGIN(VALUE); }
+<SQSTR>"'"          { BEGIN(VALUE); }
 
-<VALUE>"!"{WS}*"important" { importantCount++; }
+<VALUE>"!"({WS}*)"important" { importantCount++; }
+
 <VALUE>([0-9]+(\.[0-9]+)?|\.[0-9]+){UNIT} {
-    /* Comprobar el siguiente carácter tras la unidad */
     int next = input();
     if (isalpha(next) || isdigit(next) || next == '_' || next == '-') {
-        /* No es delimitador válido, no contar */
         unput(next);
     } else {
         measureCount++;
@@ -169,28 +156,29 @@ HEX8    \#[0-9A-Fa-f]{8}
     }
 }
 
-<VALUE>({HEX8}|{HEX6}|{HEX3})({NONHEX}|$) {
-    if (yyleng > 0 && !isxdigit((unsigned char)yytext[yyleng-1])) yyless(yyleng-1);
-    colorCount++; colorsInCurrentRule++;
+<VALUE>({HEX8}|{HEX6}|{HEX3}) {
+    colorCount++;
+    colorsInCurrentRule++;
 }
 
-<VALUE>rgba?\( { colorCount++; colorsInCurrentRule++; }
-
-<VALUE>{COLORNAME}({NONWORD}|$) {
-    if (yyleng > 0) {
-        unsigned char c = (unsigned char)yytext[yyleng-1];
-        if (!isalnum(c) && c != '_' && c != '-') yyless(yyleng-1);
-    }
-    colorCount++; colorsInCurrentRule++;
+<VALUE>rgba?\({WS}*[0-9%,.\s]+{WS}*\) {
+    colorCount++;
+    colorsInCurrentRule++;
 }
 
-<VALUE>";"   { BEGIN(BLOCK); }
-<VALUE>.      { }
+<VALUE>({COLORNAME})({NONWORD}|;|$) {
+    yyless(yyleng-1);
+    colorCount++;
+    colorsInCurrentRule++;
+}
+
+<VALUE>";"          { BEGIN(BLOCK); }
+<VALUE>.            { }
 
 %%
 
 int main(int argc, char **argv) {
-    if(argc>1) {
+    if (argc > 1) {
         yyin = fopen(argv[1], "r");
         if (!yyin) {
             fprintf(stderr, "Error al abrir archivo %s\n", argv[1]);
@@ -199,8 +187,8 @@ int main(int argc, char **argv) {
     }
     yylex();
     print_stats();
-    if (currentSelector) { free(currentSelector); currentSelector = NULL; }
-    if (maxSelectorStr) { free(maxSelectorStr); maxSelectorStr = NULL; }
-    if (argc>1 && yyin) fclose(yyin);
+    if (currentSelector) free(currentSelector);
+    if (maxSelectorStr) free(maxSelectorStr);
+    if (argc > 1 && yyin) fclose(yyin);
     return 0;
 }
